@@ -6,6 +6,7 @@ import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.WeakBase;
 import com.sun.star.uno.Type;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -19,7 +20,9 @@ public final class CMISPropertySetInfo extends WeakBase
     public CMISPropertySetInfo( XComponentContext context )
     {
         m_xContext = context;
+        available_properties = new ArrayList<Property>();
         addProperties();
+        
     };
 
     //My method

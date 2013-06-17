@@ -19,8 +19,11 @@ import com.sun.star.ucb.XContentIdentifier;
 import com.sun.star.ucb.XDynamicResultSet;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
+import com.sun.star.uno.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
@@ -30,7 +33,11 @@ import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
+import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisNameConstraintViolationException;
 
 public final class CMISContent extends ComponentBase
         implements com.sun.star.beans.XPropertySetInfoChangeNotifier,
@@ -419,17 +426,36 @@ private XRow getPropertyValues(Property[] request)
         
         
 
-for(PropertyValue p:pValues)
+        for(PropertyValue p:pValues)
         {
             if(CMISConstants.propertiesHashMap.containsKey(p.Name))
             {
                 if(xCommandInfo.getPropertyByName(p.Name).Attributes== PropertyAttribute.READONLY)
-                    ans[index] = (Any) AnyConverter.toObject(IllegalAccessException.class  
-
-,new IllegalAccessException());
+                    ans[index] = (Any) AnyConverter.toObject(IllegalAccessException.class ,new IllegalAccessException());
                 //To - DO
-                
-                
+                else if(p.Name.equalsIgnoreCase("Title"))
+                {
+                    String title = AnyConverter.toString(p.Value);
+                    
+                    Map<String,String> updateProperties = new HashMap<String,String>();
+                    updateProperties.put(PropertyIds.NAME, title);
+                    
+                    try
+                    {                                          
+                        cmisContent.updateProperties(updateProperties);
+                        ans[index] = null;
+                    }
+                    catch(CmisNameConstraintViolationException e)
+                    {
+                        ans[index] = new Any(Type.ANY,AnyConverter.toObject(IllegalArgumentException.class, new IllegalArgumentException("Name Constraint Violated")));
+                    }
+                    catch(CmisContentAlreadyExistsException e)
+                    {
+                        ans[index] = (Any) AnyConverter.toObject(IllegalArgumentException.class, new IllegalArgumentException("Content Already Exists"));
+                    }
+                    // other exceptions
+                }   
+                    
             }
             
             index ++;
