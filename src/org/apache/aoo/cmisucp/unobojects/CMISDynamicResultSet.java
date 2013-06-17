@@ -8,6 +8,7 @@ import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XResultSet;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.ucb.XContentIdentifier;
 import java.util.List;
 
 
@@ -22,12 +23,14 @@ public final class CMISDynamicResultSet extends ComponentBase
 
     private List<XRow> values;
     private Property[] props;
+    private XContentIdentifier xID;
     
-    public CMISDynamicResultSet( XComponentContext context , List<XRow> arg, Property[] argP )
+    public CMISDynamicResultSet( XComponentContext context , List<XRow> arg, Property[] argP, XContentIdentifier argID )
     {
         m_xContext = context;
         values = arg;
         props = argP;
+        xID = argID;
     };
 
     public static XSingleComponentFactory __getComponentFactory( String sImplementationName ) {
@@ -47,7 +50,7 @@ public final class CMISDynamicResultSet extends ComponentBase
     // com.sun.star.ucb.XDynamicResultSet:
     public com.sun.star.sdbc.XResultSet getStaticResultSet() throws com.sun.star.ucb.ListenerAlreadySetException
     {
-        XResultSet xResultSet = new CMISResultSet(m_xContext,values,props);
+        XResultSet xResultSet = new CMISContentResultSet(m_xContext,values,props,xID);
         return xResultSet;
     }
 

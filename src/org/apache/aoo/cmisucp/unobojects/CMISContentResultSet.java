@@ -9,14 +9,16 @@ import com.sun.star.lib.uno.helper.PropertySet;
 import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.sdbc.XResultSetMetaData;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.ucb.XContentIdentifier;
 import java.util.List;
 
 
-public final class CMISResultSet extends PropertySet
+public final class CMISContentResultSet extends PropertySet
    implements com.sun.star.sdbc.XResultSet,
               com.sun.star.sdbc.XCloseable,
               com.sun.star.sdbc.XRow,
               com.sun.star.sdbc.XColumnLocate,
+              com.sun.star.ucb.XContentAccess,
               com.sun.star.lang.XServiceInfo,
               com.sun.star.sdbc.XResultSetUpdate,
               com.sun.star.sdbc.XWarningsSupplier,
@@ -24,8 +26,9 @@ public final class CMISResultSet extends PropertySet
               com.sun.star.sdbc.XResultSetMetaDataSupplier
 {
     private final XComponentContext m_xContext;
-    private static final String m_implementationName = CMISResultSet.class.getName();
+    private static final String m_implementationName = CMISContentResultSet.class.getName();
     private static final String[] m_serviceNames = {
+        "com.sun.star.ucb.ContentResultSet",
         "com.sun.star.sdbc.ResultSet" };
 
     // properties
@@ -34,14 +37,15 @@ public final class CMISResultSet extends PropertySet
     protected int m_ResultSetType;
     protected int m_FetchDirection;
     protected int m_FetchSize;
+    protected int m_CursorTravelMode;
+    protected int m_RowCount;
+    protected boolean m_IsRowCountFinal;
 
-    //my variables
     private List<XRow> values;
-    private int m_RowCount;
     private Property[] req_props;
+    private XContentIdentifier xID;
     
-    
-    public CMISResultSet( XComponentContext context, List<XRow> arg, Property[] argProps )
+    public CMISContentResultSet( XComponentContext context, List<XRow> arg, Property[] argProps, XContentIdentifier argID  )
     {
         m_xContext = context;
         registerProperty("CursorName", "m_CursorName",
@@ -54,20 +58,25 @@ public final class CMISResultSet extends PropertySet
               (short)0);
         registerProperty("FetchSize", "m_FetchSize",
               (short)0);
+        registerProperty("CursorTravelMode", "m_CursorTravelMode",
+              PropertyAttribute.BOUND);
+        registerProperty("RowCount", "m_RowCount",
+              (short)(PropertyAttribute.MAYBEVOID|PropertyAttribute.BOUND|PropertyAttribute.MAYBEDEFAULT|PropertyAttribute.REMOVEABLE|PropertyAttribute.OPTIONAL));
+        registerProperty("IsRowCountFinal", "m_IsRowCountFinal",
+              (short)(PropertyAttribute.MAYBEVOID|PropertyAttribute.BOUND|PropertyAttribute.MAYBEDEFAULT|PropertyAttribute.REMOVEABLE|PropertyAttribute.OPTIONAL));
         
         values = arg;
         m_RowCount = 0;
         
         req_props = argProps;
-        
-        
+        xID = argID;
     };
 
     public static XSingleComponentFactory __getComponentFactory( String sImplementationName ) {
         XSingleComponentFactory xFactory = null;
 
         if ( sImplementationName.equals( m_implementationName ) )
-            xFactory = Factory.createComponentFactory(CMISResultSet.class, m_serviceNames);
+            xFactory = Factory.createComponentFactory(CMISContentResultSet.class, m_serviceNames);
         return xFactory;
     }
 
@@ -95,7 +104,7 @@ public final class CMISResultSet extends PropertySet
     }
 
     public boolean isAfterLast() throws com.sun.star.sdbc.SQLException
-    {       
+    {
         if(m_RowCount>values.size())
             return true;
         else
@@ -214,36 +223,53 @@ public final class CMISResultSet extends PropertySet
 
     public void refreshRow() throws com.sun.star.sdbc.SQLException
     {
-        //To-do
+        // TODO: Insert your implementation for "refreshRow" here.
     }
 
     public boolean rowUpdated() throws com.sun.star.sdbc.SQLException
     {
-        // TODO
+        // TODO: Exchange the default return implementation for "rowUpdated" !!!
+        // NOTE: Default initialized polymorphic structs can cause problems
+        // because of missing default initialization of primitive types of
+        // some C++ compilers or different Any initialization in Java and C++
+        // polymorphic structs.
         return false;
     }
 
     public boolean rowInserted() throws com.sun.star.sdbc.SQLException
     {
-        // TODO:
+        // TODO: Exchange the default return implementation for "rowInserted" !!!
+        // NOTE: Default initialized polymorphic structs can cause problems
+        // because of missing default initialization of primitive types of
+        // some C++ compilers or different Any initialization in Java and C++
+        // polymorphic structs.
         return false;
     }
 
     public boolean rowDeleted() throws com.sun.star.sdbc.SQLException
     {
-        // TODO
+        // TODO: Exchange the default return implementation for "rowDeleted" !!!
+        // NOTE: Default initialized polymorphic structs can cause problems
+        // because of missing default initialization of primitive types of
+        // some C++ compilers or different Any initialization in Java and C++
+        // polymorphic structs.
         return false;
     }
 
     public Object getStatement() throws com.sun.star.sdbc.SQLException
     {
+        // TODO: Exchange the default return implementation for "getStatement" !!!
+        // NOTE: Default initialized polymorphic structs can cause problems
+        // because of missing default initialization of primitive types of
+        // some C++ compilers or different Any initialization in Java and C++
+        // polymorphic structs.
         return null;
     }
 
     // com.sun.star.sdbc.XCloseable:
     public void close() throws com.sun.star.sdbc.SQLException
     {
-        // TODO: Insert your implementation for "close" here.
+        
     }
 
     // com.sun.star.sdbc.XRow:
@@ -356,6 +382,23 @@ public final class CMISResultSet extends PropertySet
                 return (i+1);
         }
         return 0;
+    }
+
+    // com.sun.star.ucb.XContentAccess:
+    public String queryContentIdentifierString()
+    {
+        return xID.getContentIdentifier();
+    }
+
+    public com.sun.star.ucb.XContentIdentifier queryContentIdentifier()
+    {
+        return xID;
+    }
+
+    public com.sun.star.ucb.XContent queryContent()
+    {
+        CMISContent content = new CMISContent(m_xContext, xID);
+        return content;
     }
 
     // com.sun.star.lang.XServiceInfo:

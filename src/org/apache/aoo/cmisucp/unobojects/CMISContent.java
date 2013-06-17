@@ -5,6 +5,7 @@ import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.XPropertySetInfo;
+import com.sun.star.io.XActiveDataSink;
 import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
@@ -217,6 +218,11 @@ public final class CMISContent extends ComponentBase
                     return xRet;
                 }
             }
+            else
+            {
+                
+                        
+            }
         }
 
         return com.sun.star.uno.Any.VOID;
@@ -365,7 +371,7 @@ public final class CMISContent extends ComponentBase
             open_result.add(xRow);
         }
     }
-    XDynamicResultSet xDynamicResultSet = new CMISDynamicResultSet(m_xContext,open_result,oarg.Properties);
+    XDynamicResultSet xDynamicResultSet = new CMISDynamicResultSet(m_xContext,open_result,oarg.Properties,xContentid);
     return xDynamicResultSet;
 }
 //My method
