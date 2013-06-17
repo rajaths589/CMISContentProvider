@@ -40,6 +40,7 @@ public final class CMISResultSet extends PropertySet
     private int m_RowCount;
     private Property[] req_props;
     
+    
     public CMISResultSet( XComponentContext context, List<XRow> arg, Property[] argProps )
     {
         m_xContext = context;
@@ -58,6 +59,8 @@ public final class CMISResultSet extends PropertySet
         m_RowCount = 0;
         
         req_props = argProps;
+        
+        
     };
 
     public static XSingleComponentFactory __getComponentFactory( String sImplementationName ) {
@@ -347,11 +350,11 @@ public final class CMISResultSet extends PropertySet
     // com.sun.star.sdbc.XColumnLocate:
     public int findColumn(String columnName) throws com.sun.star.sdbc.SQLException
     {
-        // TODO: Exchange the default return implementation for "findColumn" !!!
-        // NOTE: Default initialized polymorphic structs can cause problems
-        // because of missing default initialization of primitive types of
-        // some C++ compilers or different Any initialization in Java and C++
-        // polymorphic structs.
+        for(int i=0;i<req_props.length;i++)
+        {
+            if(req_props[i].Name.equalsIgnoreCase(columnName))
+                return (i+1);
+        }
         return 0;
     }
 

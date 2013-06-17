@@ -22,7 +22,7 @@ public final class CMISDynamicResultSet extends ComponentBase
 
     private List<XRow> values;
     private Property[] props;
-
+    
     public CMISDynamicResultSet( XComponentContext context , List<XRow> arg, Property[] argP )
     {
         m_xContext = context;
