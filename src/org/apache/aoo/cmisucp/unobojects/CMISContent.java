@@ -232,7 +232,11 @@ public final class CMISContent extends ComponentBase
                 {
                     if (o.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) 
                     {
-                        if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
+                        if(p.Name.equalsIgnoreCase("ContentType"))
+                        {
+                            childProps.add("application/cmis-document");
+                        }
+                        else if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
                         {
                             childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
                         } 
@@ -243,7 +247,11 @@ public final class CMISContent extends ComponentBase
                     } 
                     else 
                     {
-                        if (p.Name.equalsIgnoreCase("MimeType")) 
+                        if (p.Name.equalsIgnoreCase("MediaType")) 
+                        {
+                            childProps.add(null);
+                        }
+                        else if (p.Name.equalsIgnoreCase("ContentType")) 
                         {
                             childProps.add("application/cmis-folder");
                         }
@@ -259,7 +267,7 @@ public final class CMISContent extends ComponentBase
                             childProps.add(String.valueOf(size));
                         } 
                         else 
-                        {
+                        {                            
                             if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
                             {
                                 childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
@@ -286,7 +294,11 @@ public final class CMISContent extends ComponentBase
                 childProps.add(o.getId());
                 for (Property p : oarg.Properties) 
                 {
-                    if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
+                    if(p.Name.equalsIgnoreCase("ContentType"))
+                    {
+                        childProps.add("application/cmis-document");
+                    }
+                    else if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
                     {
                         childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
                     } 
@@ -310,7 +322,11 @@ public final class CMISContent extends ComponentBase
                 childProps.add(o.getId());
                 for (Property p : oarg.Properties) 
                 {
-                    if (p.Name.equalsIgnoreCase("MimeType")) 
+                    if (p.Name.equalsIgnoreCase("MediaType")) 
+                    {
+                        childProps.add(null);
+                    }
+                    else if(p.Name.equalsIgnoreCase("ContentType"))
                     {
                         childProps.add("application/cmis-folder");
                     }
@@ -354,7 +370,9 @@ private XRow getPropertyValues(Property[] request)
         {
             for(Property p:request)
             {
-                if (p.Name.equalsIgnoreCase("MimeType")) 
+                if (p.Name.equalsIgnoreCase("MediaType")) 
+                    answers.add(null);
+                else if(p.Name.equalsIgnoreCase("ContentType"))
                     answers.add("application/cmis-folder");
                 else if(p.Name.equalsIgnoreCase("Size"))
                 {
@@ -377,7 +395,9 @@ private XRow getPropertyValues(Property[] request)
         {
             for(Property p:request)
             {
-                if(CMISConstants.propertiesHashMap.containsKey(p.Name))
+                if(p.Name.equalsIgnoreCase("ContentType"))
+                    answers.add("application/cmis-document");
+                else if(CMISConstants.propertiesHashMap.containsKey(p.Name))
                     answers.add(cmisContent.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
                 else
                     answers.add(null);
