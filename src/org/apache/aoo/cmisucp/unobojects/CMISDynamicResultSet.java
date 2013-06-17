@@ -1,5 +1,6 @@
 package org.apache.aoo.cmisucp.unobojects;
 
+import com.sun.star.beans.Property;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
@@ -20,11 +21,13 @@ public final class CMISDynamicResultSet extends ComponentBase
         "com.sun.star.ucb.DynamicResultSet" };
 
     private List<XRow> values;
+    private Property[] props;
 
-    public CMISDynamicResultSet( XComponentContext context , List<XRow> arg)
+    public CMISDynamicResultSet( XComponentContext context , List<XRow> arg, Property[] argP )
     {
         m_xContext = context;
         values = arg;
+        props = argP;
     };
 
     public static XSingleComponentFactory __getComponentFactory( String sImplementationName ) {
@@ -44,7 +47,7 @@ public final class CMISDynamicResultSet extends ComponentBase
     // com.sun.star.ucb.XDynamicResultSet:
     public com.sun.star.sdbc.XResultSet getStaticResultSet() throws com.sun.star.ucb.ListenerAlreadySetException
     {
-        XResultSet xResultSet = new CMISResultSet(m_xContext,values);
+        XResultSet xResultSet = new CMISResultSet(m_xContext,values,props);
         return xResultSet;
     }
 

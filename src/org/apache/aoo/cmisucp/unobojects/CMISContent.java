@@ -365,7 +365,7 @@ public final class CMISContent extends ComponentBase
             open_result.add(xRow);
         }
     }
-    XDynamicResultSet xDynamicResultSet = new CMISDynamicResultSet(m_xContext,open_result);
+    XDynamicResultSet xDynamicResultSet = new CMISDynamicResultSet(m_xContext,open_result,oarg.Properties);
     return xDynamicResultSet;
 }
 //My method

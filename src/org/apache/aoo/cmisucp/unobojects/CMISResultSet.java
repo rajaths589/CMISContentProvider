@@ -1,11 +1,13 @@
 package org.apache.aoo.cmisucp.unobojects;
 
+import com.sun.star.beans.Property;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.PropertySet;
 import com.sun.star.beans.PropertyAttribute;
+import com.sun.star.sdbc.XResultSetMetaData;
 import com.sun.star.sdbc.XRow;
 import java.util.List;
 
@@ -36,8 +38,9 @@ public final class CMISResultSet extends PropertySet
     //my variables
     private List<XRow> values;
     private int m_RowCount;
+    private Property[] req_props;
     
-    public CMISResultSet( XComponentContext context, List<XRow> arg )
+    public CMISResultSet( XComponentContext context, List<XRow> arg, Property[] argProps )
     {
         m_xContext = context;
         registerProperty("CursorName", "m_CursorName",
@@ -53,6 +56,8 @@ public final class CMISResultSet extends PropertySet
         
         values = arg;
         m_RowCount = 0;
+        
+        req_props = argProps;
     };
 
     public static XSingleComponentFactory __getComponentFactory( String sImplementationName ) {
@@ -505,12 +510,9 @@ public final class CMISResultSet extends PropertySet
     // com.sun.star.sdbc.XResultSetMetaDataSupplier:
     public com.sun.star.sdbc.XResultSetMetaData getMetaData() throws com.sun.star.sdbc.SQLException
     {
-        // TODO: Exchange the default return implementation for "getMetaData" !!!
-        // NOTE: Default initialized polymorphic structs can cause problems
-        // because of missing default initialization of primitive types of
-        // some C++ compilers or different Any initialization in Java and C++
-        // polymorphic structs.
-        return null;
+        XResultSetMetaData xResultSetMetaData;
+        xResultSetMetaData = new CMISResultSetMetaData(m_xContext, req_props);
+        return xResultSetMetaData;
     }
 
 }
