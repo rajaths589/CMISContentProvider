@@ -220,8 +220,7 @@ public final class CMISContent extends ComponentBase
             }
             else
             {
-                
-                        
+                openArg.Sink = new CMISActiveDataSink(m_xContext, cmisContent, connected_session);
             }
         }
 
