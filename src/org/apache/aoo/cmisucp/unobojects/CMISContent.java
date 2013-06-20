@@ -5,7 +5,14 @@ import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.XPropertySetInfo;
+import com.sun.star.io.BufferSizeExceededException;
+import com.sun.star.io.IOException;
+import com.sun.star.io.NotConnectedException;
 import com.sun.star.io.XActiveDataSink;
+import com.sun.star.io.XActiveDataStreamer;
+import com.sun.star.io.XInputStream;
+import com.sun.star.io.XOutputStream;
+import com.sun.star.io.XStream;
 import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
@@ -15,12 +22,14 @@ import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
+import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
 import com.sun.star.ucb.XContentIdentifier;
 import com.sun.star.ucb.XDynamicResultSet;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
+import com.sun.star.uno.UnoRuntime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,13 +39,13 @@ import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
 import org.apache.aoo.cmisucp.cmis.CMISConnect;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
+import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisNameConstraintViolationException;
 
@@ -217,16 +226,71 @@ public final class CMISContent extends ComponentBase
                     xRet = openFolder(openArg);
                     return xRet;
                 }
+                else
+                {
+                    throw new IllegalArgumentException("Document Modes not supported");
+                }
             }
             else
             {
-                openArg.Sink = new CMISActiveDataSink(m_xContext, cmisContent, connected_session);
+                if(openArg.Mode == OpenMode.DOCUMENT)
+                {
+                    final XInputStream xInp = new CMISInputStream(m_xContext, (Document)cmisContent);
+                    XActiveDataSink xDataSink = UnoRuntime.queryInterface(XActiveDataSink.class,openArg.Sink);
+                    if(xDataSink!=null)
+                        xDataSink.setInputStream(xInp);
+                    else
+                    {
+                        XActiveDataStreamer xDataStream = UnoRuntime.queryInterface(XActiveDataStreamer.class, openArg.Sink);                                
+                        if(xDataStream!=null)
+                        {
+                            XStream xStream = new XStream() {                                
+                                public XInputStream getInputStream() {
+                                    return xInp;
+                                }
+
+                                public XOutputStream getOutputStream() {
+                                    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.                                    
+                                }
+                            };
+                            xDataStream.setStream(xStream);
+                        }
+                        else
+                        {
+                            XOutputStream xOp = UnoRuntime.queryInterface(XOutputStream.class, openArg.Sink);
+                            if(xOp!=null)
+                            {
+                                copyStream(xOp,xInp);
+                            }
+                            else
+                            {
+                                throw new IllegalArgumentException("Not xoutputstream/xactivedatasink/xactivedatastreamer");
+                            }
+                        }
+                    }
+                }
+                else if(openArg.Mode == OpenMode.DOCUMENT_SHARE_DENY_NONE || openArg.Mode == OpenMode.DOCUMENT_SHARE_DENY_WRITE)
+                    throw new UnsupportedCommandException();
+                else
+                    throw new IllegalArgumentException("Modes not supported for this content");
+                                
             }
         }
 
         return com.sun.star.uno.Any.VOID;
     }
-
+    
+    private void copyStream(XOutputStream xOut, XInputStream xInp) throws NotConnectedException, BufferSizeExceededException, IOException
+    {
+        byte[][] buffer = new byte[1][1];
+        int len = xInp.readBytes(buffer, 1024);
+        while(len==1024)
+        {
+            xOut.writeBytes(buffer[0]);
+            len = xInp.readBytes(buffer, 1024);
+        }
+    }
+    
     //My method
     private XDynamicResultSet openFolder(OpenCommandArgument2 oarg) {
         List<XRow> open_result = new ArrayList<XRow>();

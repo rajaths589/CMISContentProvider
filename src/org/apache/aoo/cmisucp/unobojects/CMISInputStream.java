@@ -33,25 +33,40 @@ public final class CMISInputStream extends WeakBase
     // com.sun.star.io.XInputStream:
     public int readBytes(byte[][] aData, int nBytesToRead) throws com.sun.star.io.NotConnectedException, com.sun.star.io.BufferSizeExceededException, com.sun.star.io.IOException
     {
-        int size = 0;
+        int size = 0;        
+        if(stream==null)
+            throw new NotConnectedException();
         
         try 
         {
-            size = stream.read(aData[0], 0, nBytesToRead);
+            byte bytes[] = new byte[nBytesToRead];            
+            size = stream.read(bytes, 0, nBytesToRead);
+            if(size>0)
+            {
+                if(size < nBytesToRead)
+                {
+                    byte smallBuffer[] = new byte[size];
+                    System.arraycopy(bytes, 0, smallBuffer, 0, size);
+                    bytes = smallBuffer;
+                }
+                
+            }
+            else
+            {
+                bytes = new byte[0];
+                size = 0;
+            }
+            aData[0] = bytes;
+            return size;                       
         }
         catch (IOException ex) 
         {
             throw new com.sun.star.io.IOException();          
-        }
-        catch(NullPointerException ex)
-        {
-            throw new NotConnectedException();
-        }
-        catch(ArrayIndexOutOfBoundsException ex)
+        }        
+        catch(IndexOutOfBoundsException ex)
         {
             throw new BufferSizeExceededException();
-        }
-        return size;                       
+        }        
     }
 
     public int readSomeBytes(byte[][] aData, int nMaxBytesToRead) throws com.sun.star.io.NotConnectedException, com.sun.star.io.BufferSizeExceededException, com.sun.star.io.IOException
