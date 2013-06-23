@@ -39,6 +39,7 @@ public final class CMISCommandInfo extends WeakBase
         supported_commands.add(new CommandInfo("search",-1,Type.ANY));
         supported_commands.add(new CommandInfo("transfer",-1,Type.ANY));
         supported_commands.add(new CommandInfo("createNewContent",-1,Type.ANY));
+        supported_commands.add(new CommandInfo("CreatableContentsInfo",-1,Type.ANY));
     }
     
     // com.sun.star.ucb.XCommandInfo:

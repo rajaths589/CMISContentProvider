@@ -1,15 +1,19 @@
 package org.apache.aoo.cmisucp;
 
+import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.WeakBase;
+import com.sun.star.sdbc.SQLException;
 import com.sun.star.ucb.IllegalIdentifierException;
 import com.sun.star.ucb.XContent;
 import com.sun.star.ucb.XContentIdentifier;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.unobojects.CMISContent;
 import org.apache.aoo.cmisucp.unobojects.CMISContentIdentifier;
 
@@ -105,8 +109,12 @@ public final class CMISContentProvider extends WeakBase
         if(xRet!=null)
             return xRet;
         
-        CMISContent cmisObj = new CMISContent(m_xContext, Identifier);
-        registerNewContent(cmisObj,Identifier);
+        CMISContent cmisObj;
+        
+        cmisObj = new CMISContent(m_xContext, Identifier);
+        registerNewContent(cmisObj,Identifier);            
+        
+        
         return cmisObj;
     }
 

@@ -19,17 +19,24 @@ import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
+import com.sun.star.sdbc.SQLException;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.ucb.ContentInfo;
+import com.sun.star.ucb.ContentInfoAttribute;
+import com.sun.star.ucb.InsertCommandArgument;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
+import com.sun.star.ucb.XContent;
 import com.sun.star.ucb.XContentIdentifier;
 import com.sun.star.ucb.XDynamicResultSet;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,13 +48,20 @@ import org.apache.aoo.cmisucp.cmis.CMISConnect;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.ObjectType;
 import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
+import org.apache.chemistry.opencmis.client.util.FileUtils;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
+import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
+import org.apache.chemistry.opencmis.commons.enums.VersioningState;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisNameConstraintViolationException;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 
 public final class CMISContent extends ComponentBase
         implements com.sun.star.beans.XPropertySetInfoChangeNotifier,
@@ -73,31 +87,79 @@ public final class CMISContent extends ComponentBase
     private static final Logger log = Logger.getLogger(CMISConnect.class.getName());
     private boolean is_folder;
     private String id;
-
-    public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier) {
+    private boolean exists;
+    private String path;
+    
+    public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier)  {
         m_xContext = context;
 
         xContentid = xContentIdentifier;
         //path = getRelativePath(xContentid.getContentIdentifier());
 
         processIdentifier(xContentIdentifier.getContentIdentifier());
+        //exists = true;  
+        path = xContentIdentifier.getContentIdentifier();
     }
 
-    ;
+    public CMISContent(XComponentContext context, String type, String uri)
+    {
+        m_xContext = context;
+        contentType = type;
+        if(type.equalsIgnoreCase("application/cmis-document"))
+            is_folder = false;
+        else
+            is_folder = true;
+        processIdentifier(uri);
+        exists = false;        
+        
+        path = uri;
+    }
     
     //My method
     public void processIdentifier(String uri) {
 
-        uri = uri.substring(7);
-        uri = "/".concat(uri);
-
+        uri = uri.substring(6);        
+        
         log.log(Level.INFO, "URI:{0}", uri);
 
-        CMISConnect aConnect = new CMISConnect("http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
+        CMISConnect aConnect;
 
-        connected_session = aConnect.getSession();
-        cmisContent = aConnect.getObject();
+        try
+        {
+            aConnect = new CMISConnect("http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
+            connected_session = aConnect.getSession();
+            cmisContent = aConnect.getObject();
+        }
+        catch(CmisBaseException e)
+        {
+            exists = false;
+            if(e.getExceptionName().equalsIgnoreCase(CmisConnectionException.EXCEPTION_NAME))
+            {
+                // To-Do . connected_session - not connected;
+            }
+            else if(e.getExceptionName().equalsIgnoreCase(CmisObjectNotFoundException.EXCEPTION_NAME))
+            {
+                
+                    //throw unknown path exception                
+                
+            }
+            else
+            {
+                // throw some expception
+            }
+            return;
+        }
+        exists = true;
+        setContentType(aConnect);
+        
+        
+    }
 
+    private void setContentType(CMISConnect aConnect)
+    {
+        if(!exists)
+            return;
+        
         if (aConnect.getContentType().equalsIgnoreCase(BaseTypeId.CMIS_FOLDER.value())) {
             contentType = "application/cmis-folder";
             is_folder = true;
@@ -109,10 +171,8 @@ public final class CMISContent extends ComponentBase
 
         
         id = cmisContent.getId();
-
-        log.log(Level.INFO, "ContentType:{0}", contentType);
     }
-
+    
     public boolean isFolder() {
         return is_folder;
     }
@@ -198,23 +258,32 @@ public final class CMISContent extends ComponentBase
     }
 
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException {
-        if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) {
+        if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
+        {
             XCommandInfo xRet = new CMISCommandInfo(m_xContext);
             return xRet;
-        } else if (aCommand.Name.equalsIgnoreCase("getPropertySetInfo")) {
+        }
+        else if (aCommand.Name.equalsIgnoreCase("getPropertySetInfo")) 
+        {
             XPropertySetInfo xRet = new CMISPropertySetInfo(m_xContext);
             return xRet;
-        } else if (aCommand.Name.equalsIgnoreCase("getPropertyValues")) {
+        }
+        else if (aCommand.Name.equalsIgnoreCase("getPropertyValues")) 
+        {            
             Property[] rProperties;
             rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);
             log.info("getPropertyValues()");
             return getPropertyValues(rProperties);
-        } else if (aCommand.Name.equalsIgnoreCase("setPropertyValues")) {
+        }
+        else if (aCommand.Name.equalsIgnoreCase("setPropertyValues")) 
+        {
             PropertyValue[] pValues;
             pValues = (PropertyValue[]) AnyConverter.toArray(aCommand.Argument);
             log.info("setPropertyValues()");
             return setPropertyValues(pValues);
-        } else if (aCommand.Name.equalsIgnoreCase("open")) {
+        }
+        else if (aCommand.Name.equalsIgnoreCase("open")) 
+        {
             log.info("open()");
 
             OpenCommandArgument2 openArg;
@@ -276,10 +345,25 @@ public final class CMISContent extends ComponentBase
                                 
             }
         }
+        else if(aCommand.Name.equalsIgnoreCase("CreatableContentsInfo"))
+        {            
+            return queryCreatableContentsInfo();
+        }
+        else if(aCommand.Name.equalsIgnoreCase("CreateNewContent"))
+        {
+            ContentInfo info = (ContentInfo) AnyConverter.toObject(ContentInfo.class, aCommand.Argument);
+            return createNewContent(info);
+        }
+        else if(aCommand.Name.equalsIgnoreCase("Insert"))
+        {
+            InsertCommandArgument insertArg = (InsertCommandArgument) AnyConverter.toObject(InsertCommandArgument.class, aCommand.Argument);
+            return insert(insertArg);
+        }
 
         return com.sun.star.uno.Any.VOID;
     }
     
+    //My method
     private void copyStream(XOutputStream xOut, XInputStream xInp) throws NotConnectedException, BufferSizeExceededException, IOException
     {
         byte[][] buffer = new byte[1][1];
@@ -292,9 +376,110 @@ public final class CMISContent extends ComponentBase
     }
     
     //My method
+    private Object insert(InsertCommandArgument iArg) throws NotConnectedException, IOException
+    {
+        if(exists)
+        {
+            if(!is_folder)
+            {
+                // To-be tested
+                Document docContent = (Document)cmisContent;
+                ContentStream conStream;
+                byte buffer[][] = new byte[1][1];
+                int readSize  = iArg.Data.readBytes(buffer, 1024);
+                ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+                while(readSize==1024)
+                {
+                    byteOutput.write(buffer[0], 0, 1024);
+                    readSize  = iArg.Data.readBytes(buffer, 1024);
+                }
+                byteOutput.write(buffer[0], 0, 1024);
+                
+                ByteArrayInputStream byteInp = new ByteArrayInputStream(byteOutput.toByteArray());
+                
+                conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),iArg.Data.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  byteInp);
+                
+                docContent.setContentStream(conStream,false);
+                
+                    
+                return null;
+            }
+            else
+            {
+                Folder parentFolder = ((Folder)cmisContent).getFolderParent();
+                FileUtils.delete(id, connected_session);
+                
+                cmisContent  = FileUtils.createFolder(parentFolder, path.substring(6,path.lastIndexOf("/")+1), "cmis:folder");
+            
+                // Content Event to be added.
+                return null;
+            }
+        }
+        else
+        {
+            if(is_folder)
+            {
+               if(xContentid!=null) 
+               {
+                   String parentUri = xContentid.getContentIdentifier().substring(0, xContentid.getContentIdentifier().lastIndexOf('/'));
+                   processIdentifier(parentUri);
+                   Folder parent = (Folder)cmisContent;
+                   Map<String,String> folderProps = new HashMap<String, String>();
+                   folderProps.put(PropertyIds.NAME, xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1));
+                   folderProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.FOLDER_BASETYPE_ID);  
+                   parent.createFolder(folderProps);
+                   exists = true;
+                   processIdentifier(xContentid.getContentIdentifier());
+               }
+               else
+               {
+                //throw some exception;
+                   ;
+               }
+            }
+            else
+            {
+                if(xContentid!=null)
+                {
+                    String parentUri = xContentid.getContentIdentifier().substring(0, xContentid.getContentIdentifier().lastIndexOf('/'));
+                    processIdentifier(parentUri);
+                    Folder parent = (Folder)cmisContent;
+                    Map<String,String> docProps = new HashMap<String, String>();
+                    docProps.put(PropertyIds.NAME, xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1));
+                    docProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.FOLDER_BASETYPE_ID);                   
+                    ContentStream conStream;
+                    byte buffer[][] = new byte[1][1];
+                    int readSize  = iArg.Data.readBytes(buffer, 1024);
+                    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+                    while(readSize==1024)
+                    {
+                        byteOutput.write(buffer[0], 0, 1024);
+                        readSize  = iArg.Data.readBytes(buffer, 1024);
+                    }
+                    byteOutput.write(buffer[0], 0, 1024);
+                    
+                    ByteArrayInputStream byteInp = new ByteArrayInputStream(byteOutput.toByteArray());
+                
+                    conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),iArg.Data.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  byteInp);
+                    parent.createDocument(docProps, conStream, VersioningState.NONE);
+                    exists = true;
+                    processIdentifier(xContentid.getContentIdentifier());
+                }
+                else
+                {
+                    //throw property values not set exception.
+                }
+            }
+        }
+        return null;
+    }
+    //My method
     private XDynamicResultSet openFolder(OpenCommandArgument2 oarg) {
         List<XRow> open_result = new ArrayList<XRow>();
         Folder f = (Folder) cmisContent;
+        if(!exists)
+            return null;
+        
         OperationContext opCon = connected_session.createOperationContext();
         if (oarg.Mode == OpenMode.ALL) 
         {
@@ -440,14 +625,25 @@ public final class CMISContent extends ComponentBase
 //My method
 private XRow getPropertyValues(Property[] request)
     {
+        if(!exists)
+            return null;
+        
         List<String> answers = new ArrayList<String>();
+        
         answers.add(cmisContent.getId());
-       if(isFolder())
+        if(request == null)
+        {
+            CMISPropertySetInfo propSetInfo = new CMISPropertySetInfo(m_xContext);
+            request = propSetInfo.getProperties();
+        }        
+        if(isFolder())
         {
             for(Property p:request)
             {
                 if (p.Name.equalsIgnoreCase("MediaType")) 
-                    answers.add(null);
+                {
+                    answers.add(null);                
+                }
                 else if(p.Name.equalsIgnoreCase("ContentType"))
                     answers.add("application/cmis-folder");
                 else if(p.Name.equalsIgnoreCase("Size"))
@@ -499,30 +695,43 @@ private XRow getPropertyValues(Property[] request)
         {
             if(CMISConstants.propertiesHashMap.containsKey(p.Name))
             {
-                if(xCommandInfo.getPropertyByName(p.Name).Attributes== PropertyAttribute.READONLY)
+                if(xCommandInfo.getPropertyByName(p.Name).Attributes == PropertyAttribute.READONLY)
                     ans[index] = (Any) AnyConverter.toObject(IllegalAccessException.class ,new IllegalAccessException());
                 //To - DO
                 else if(p.Name.equalsIgnoreCase("Title"))
                 {
-                    String title = AnyConverter.toString(p.Value);
-                    
-                    Map<String,String> updateProperties = new HashMap<String,String>();
-                    updateProperties.put(PropertyIds.NAME, title);
-                    
-                    try
-                    {                                          
-                        cmisContent.updateProperties(updateProperties);
-                        ans[index] = null;
-                    }
-                    catch(CmisNameConstraintViolationException e)
+                    if(exists)
                     {
-                        ans[index] = new Any(Type.ANY,AnyConverter.toObject(IllegalArgumentException.class, new IllegalArgumentException("Name Constraint Violated")));
-                    }
-                    catch(CmisContentAlreadyExistsException e)
-                    {
-                        ans[index] = (Any) AnyConverter.toObject(IllegalArgumentException.class, new IllegalArgumentException("Content Already Exists"));
-                    }
+                        String title = AnyConverter.toString(p.Value);
+                    
+                        Map<String,String> updateProperties = new HashMap<String,String>();
+                        updateProperties.put(PropertyIds.NAME, title);
+                    
+                        try
+                        {                                          
+                            cmisContent.updateProperties(updateProperties);
+                            ans[index] = null;
+                        }
+                        catch(CmisNameConstraintViolationException e)
+                        {
+                            ans[index] = new Any(Type.ANY,AnyConverter.toObject(IllegalArgumentException.class, new IllegalArgumentException("Name Constraint Violated")));
+                        }
+                        catch(CmisContentAlreadyExistsException e)
+                        {
+                            ans[index] = (Any) AnyConverter.toObject(IllegalArgumentException.class, new IllegalArgumentException("Content Already Exists"));
+                        }
                     // other exceptions
+                    }
+                    else
+                    {
+                        String url;
+                        if(xContentid==null)
+                        {
+                            path = path+"/"+AnyConverter.toString(p.Value);
+                            xContentid = new CMISContentIdentifier(m_xContext, path);
+                            ans[index] = null;
+                        }
+                    }
                 }   
                     
             }
@@ -564,22 +773,65 @@ private XRow getPropertyValues(Property[] request)
     // com.sun.star.ucb.XContentCreator:
     public com.sun.star.ucb.ContentInfo[] queryCreatableContentsInfo()
     {
-        // TODO: Exchange the default return implementation for "queryCreatableContentsInfo" !!!
-        // NOTE: Default initialized polymorphic structs can cause problems
-        // because of missing default initialization of primitive types of
-        // some C++ compilers or different Any initialization in Java and C++
-        // polymorphic structs.
-        return new com.sun.star.ucb.ContentInfo[0];
+        ContentInfo info[] = new ContentInfo[2];
+        
+        Property p[] = new Property[1];
+        p[0] = new Property("Title", -1, Type.STRING, PropertyAttribute.BOUND);
+                
+        info[0] = new ContentInfo("application/cmis-folder", ContentInfoAttribute.KIND_FOLDER, p);
+        info[1] = new ContentInfo("application/cmis-document",ContentInfoAttribute.INSERT_WITH_INPUTSTREAM|ContentInfoAttribute.KIND_DOCUMENT,p);
+                        
+        
+        if(isFolder())
+        {
+            ContentInfo[] returnInfo;
+            List<Object> oT = cmisContent.getProperty(PropertyIds.ALLOWED_CHILD_OBJECT_TYPE_IDS).getValues();
+            int flag = 0;
+            
+            for(Object o:oT)
+            {
+                if(o.toString().equals("*"))
+                {
+                    flag = 3;
+                    break;
+                }
+                else if(o.toString().equalsIgnoreCase(ObjectType.DOCUMENT_BASETYPE_ID))
+                {
+                    flag += 1;
+                }
+                else if(o.toString().equalsIgnoreCase(ObjectType.FOLDER_BASETYPE_ID))
+                {
+                    flag += 2;
+                }
+                
+            }
+            if(flag==3)
+                return info;        
+            else if(flag==1)
+            {
+                returnInfo = new ContentInfo[1];
+                returnInfo[0] = info[0];
+                return returnInfo;
+            }
+            else if(flag==2)
+            {
+                returnInfo = new ContentInfo[1];
+                returnInfo[0] = info[1];
+                return returnInfo;
+            }
+            
+        }
+        else
+            return null;
+        // Deprecated;                                
+        return null;
     }
 
     public com.sun.star.ucb.XContent createNewContent(com.sun.star.ucb.ContentInfo Info)
-    {
-        // TODO: Exchange the default return implementation for "createNewContent" !!!
-        // NOTE: Default initialized polymorphic structs can cause problems
-        // because of missing default initialization of primitive types of
-        // some C++ compilers or different Any initialization in Java and C++
-        // polymorphic structs.
-        return null;
+    {        
+        XContent xContent;
+        xContent = new CMISContent(m_xContext, Info.Type, path);
+        return xContent;
     }
 
     // com.sun.star.beans.XPropertyContainer:
