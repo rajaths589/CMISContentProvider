@@ -17,7 +17,6 @@ import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
-import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XRow;
@@ -36,25 +35,19 @@ import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
 import org.apache.aoo.cmisucp.cmis.CMISConnect;
+import org.apache.aoo.cmisucp.cmis.CMISResourceManager;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
-import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.ObjectType;
 import org.apache.chemistry.opencmis.client.api.OperationContext;
-import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.util.FileUtils;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
-import org.apache.chemistry.opencmis.commons.data.ContentStream;
-import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
-import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
@@ -85,30 +78,44 @@ public final class CMISContent extends ComponentBase
     private static final Logger log = Logger.getLogger(CMISConnect.class.getName());
     private boolean is_folder;
     private String id;
-    private boolean exists;
+
+    private boolean exists;     //Whether exists on CMIS repository
+    private boolean created;    // whether created using createNewContent
+    private boolean nameSet;    // whether name set
+    private boolean inserted;   // whether inserted
+    
     private String path;
+    CMISResourceManager resourceManager;
     
     public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier)  {
+        
         m_xContext = context;
-
-        xContentid = xContentIdentifier;
-        //path = getRelativePath(xContentid.getContentIdentifier());
+        xContentid = xContentIdentifier;        
 
         processIdentifier(xContentIdentifier.getContentIdentifier());
-        //exists = true;  
         path = xContentIdentifier.getContentIdentifier();
+    
+        created = false;
+        nameSet = false;
+        inserted = false;
+        
     }
 
     public CMISContent(XComponentContext context, String type, String uri)
     {
         m_xContext = context;
         contentType = type;
+        
         if(type.equalsIgnoreCase("application/cmis-document"))
             is_folder = false;
         else
             is_folder = true;
+        
         processIdentifier(uri);
         exists = false;        
+        created = true;
+        inserted = false;
+        nameSet = false;
         
         path = uri;
     }
@@ -124,9 +131,11 @@ public final class CMISContent extends ComponentBase
 
         try
         {
-            aConnect = new CMISConnect("http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
+            aConnect = new CMISConnect(m_xContext,"http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
             connected_session = aConnect.getSession();
             cmisContent = aConnect.getObject();
+            resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);
+            
         }
         catch(CmisBaseException e)
         {
@@ -148,27 +157,19 @@ public final class CMISContent extends ComponentBase
             return;
         }
         exists = true;
-        setContentType(aConnect);
+        setContentType();
         
         
     }
 
-    private void setContentType(CMISConnect aConnect)
+    private void setContentType()
     {
         if(!exists)
             return;
-        
-        if (aConnect.getContentType().equalsIgnoreCase(BaseTypeId.CMIS_FOLDER.value())) {
-            contentType = "application/cmis-folder";
-            is_folder = true;
-            
-        } else {
-            contentType = "application/cmis-document";
-            is_folder = false;
-        }
-
-        
-        id = cmisContent.getId();
+                
+        contentType = resourceManager.getContentType();        
+        id = resourceManager.getID();
+        is_folder = resourceManager.isFolder();
     }
     
     public boolean isFolder() {
@@ -301,8 +302,8 @@ public final class CMISContent extends ComponentBase
             else
             {
                 if(openArg.Mode == OpenMode.DOCUMENT)
-                {
-                    final XInputStream xInp = new CMISInputStream(m_xContext, (Document)cmisContent);
+                {                    
+                    final XInputStream xInp  = resourceManager.getInputStream();
                     XActiveDataSink xDataSink = UnoRuntime.queryInterface(XActiveDataSink.class,openArg.Sink);
                     if(xDataSink!=null)
                         xDataSink.setInputStream(xInp);
@@ -385,24 +386,16 @@ public final class CMISContent extends ComponentBase
             if(!is_folder)
             {
                 // To-be tested
-                Document docContent = (Document)cmisContent;
-                ContentStream conStream;
-                com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter inputStr = new XInputStreamToInputStreamAdapter(iArg.Data);
-                
-                conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),inputStr.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  inputStr);
-                
-                docContent.setContentStream(conStream,false);
-                
-                    
+                resourceManager.setInputStream(iArg.Data);
                 return null;
             }
             else
             {
-                Folder parentFolder = ((Folder)cmisContent).getFolderParent();
-                FileUtils.delete(id, connected_session);
+                Folder parentFolder = resourceManager.getParent();
+                FileUtils.delete(resourceManager.getID(),connected_session);
                 
                 cmisContent  = FileUtils.createFolder(parentFolder, path.substring(6,path.lastIndexOf("/")+1), "cmis:folder");
-            
+                resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);
                 // Content Event to be added.
                 return null;
             }
@@ -411,17 +404,16 @@ public final class CMISContent extends ComponentBase
         {
             if(is_folder)
             {
-               if(xContentid!=null) 
+               if(nameSet) 
                {
                    String parentUri = xContentid.getContentIdentifier().substring(0, xContentid.getContentIdentifier().lastIndexOf('/'));
                    processIdentifier(parentUri);
-                   Folder parent = (Folder)cmisContent;
-                   Map<String,String> folderProps = new HashMap<String, String>();
-                   folderProps.put(PropertyIds.NAME, xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1));
-                   folderProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.FOLDER_BASETYPE_ID);  
-                   parent.createFolder(folderProps);
-                   exists = true;
-                   processIdentifier(xContentid.getContentIdentifier());
+                   if(resourceManager.createFolder(xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1)))
+                   {
+                        exists = true;                        
+                        processIdentifier(xContentid.getContentIdentifier());
+                        //ContentEvent to be created
+                   }
                }
                else
                {
@@ -431,20 +423,15 @@ public final class CMISContent extends ComponentBase
             }
             else
             {
-                if(xContentid!=null)
+                if(nameSet)
                 {
                     String parentUri = xContentid.getContentIdentifier().substring(0, xContentid.getContentIdentifier().lastIndexOf('/'));
                     processIdentifier(parentUri);
-                    Folder parent = (Folder)cmisContent;
-                    Map<String,String> docProps = new HashMap<String, String>();
-                    docProps.put(PropertyIds.NAME, xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1));
-                    docProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.FOLDER_BASETYPE_ID);                   
-                    ContentStream conStream;
-                    XInputStreamToInputStreamAdapter inpStream = new XInputStreamToInputStreamAdapter(iArg.Data);
-                    conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),inpStream.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  inpStream);
-                    parent.createDocument(docProps, conStream, VersioningState.NONE);
-                    exists = true;
-                    processIdentifier(xContentid.getContentIdentifier());
+                    if(resourceManager.createDocument(iArg.Data,xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1), "txt/plain"))
+                    {
+                        exists = true;
+                        processIdentifier(xContentid.getContentIdentifier());
+                    }
                 }
                 else
                 {
@@ -457,70 +444,25 @@ public final class CMISContent extends ComponentBase
     //My method
     private XDynamicResultSet openFolder(OpenCommandArgument2 oarg) {
         List<XRow> open_result = new ArrayList<XRow>();
-        Folder f = (Folder) cmisContent;
+        
         if(!exists)
             return null;
         
+        Folder f = resourceManager.getFolder();
         OperationContext opCon = connected_session.createOperationContext();
         if (oarg.Mode == OpenMode.ALL) 
         {
             for (CmisObject o : f.getChildren()) 
-            {
+            {       
+                
                 List<String> childProps;
                 childProps = new ArrayList<String>();
 
                 childProps.add(o.getId());
-                for (Property p : oarg.Properties) 
-                {
-                    if (o.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) 
-                    {
-                        if(p.Name.equalsIgnoreCase("ContentType"))
-                        {
-                            childProps.add("application/cmis-document");
-                        }
-                        else if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
-                        {
-                            childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
-                        } 
-                        else 
-                        {
-                            childProps.add(null);
-                        }
-                    } 
-                    else 
-                    {
-                        if (p.Name.equalsIgnoreCase("MediaType")) 
-                        {
-                            childProps.add(null);
-                        }
-                        else if (p.Name.equalsIgnoreCase("ContentType")) 
-                        {
-                            childProps.add("application/cmis-folder");
-                        }
-                        else if (p.Name.equalsIgnoreCase("Size")) 
-                        {
-                            String queryString;
-                            queryString = "SELECT " + CMISConstants.propertiesHashMap.get("Size") + " FROM cmis:document WHERE IN_TREE(\'" + id + "\')";
-                            long size = 0;
-                            for (QueryResult qR : connected_session.query(queryString, false)) 
-                            {
-                                size += Long.parseLong(qR.getPropertyValueById("cmis:contentStreamLength").toString());
-                            }
-                            childProps.add(String.valueOf(size));
-                        } 
-                        else 
-                        {                            
-                            if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
-                            {
-                                childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
-                            } 
-                            else 
-                            {
-                                childProps.add(null);
-                            }
-                        }
-                    }
-                }
+                
+                CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
+                
+                childProps.addAll(tempChildResource.getProperties(oarg.Properties));
                 XRow xRow = new CMISRow(childProps);
                 open_result.add(xRow);
             }
@@ -534,21 +476,9 @@ public final class CMISContent extends ComponentBase
                 childProps = new ArrayList<String>();
 
                 childProps.add(o.getId());
-                for (Property p : oarg.Properties) 
-                {
-                    if(p.Name.equalsIgnoreCase("ContentType"))
-                    {
-                        childProps.add("application/cmis-document");
-                    }
-                    else if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
-                    {
-                        childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
-                    } 
-                    else 
-                    {
-                        childProps.add(null);
-                    }
-                }
+                CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
+                
+                childProps.addAll(tempChildResource.getProperties(oarg.Properties));
                 XRow xRow = new CMISRow(childProps);
                 open_result.add(xRow);
             }
@@ -562,39 +492,9 @@ public final class CMISContent extends ComponentBase
                 childProps = new ArrayList<String>();
 
                 childProps.add(o.getId());
-                for (Property p : oarg.Properties) 
-                {
-                    if (p.Name.equalsIgnoreCase("MediaType")) 
-                    {
-                        childProps.add(null);
-                    }
-                    else if(p.Name.equalsIgnoreCase("ContentType"))
-                    {
-                        childProps.add("application/cmis-folder");
-                    }
-                    else if (p.Name.equalsIgnoreCase("Size")) 
-                    {
-                        String queryString;
-                        queryString = "SELECT " + CMISConstants.propertiesHashMap.get("Size") + " FROM cmis:document WHERE IN_TREE(\'" + id + "\')";
-                        long size = 0;
-                        for (QueryResult qR : connected_session.query(queryString, false)) 
-                        {
-                            size += Long.parseLong(qR.getPropertyValueById("cmis:contentStreamLength").toString());
-                        }
-                        childProps.add(String.valueOf(size));
-                    } 
-                    else 
-                    {
-                        if (CMISConstants.propertiesHashMap.containsKey(p.Name)) 
-                        {
-                            childProps.add(o.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
-                        }
-                        else 
-                        {
-                            childProps.add(null);
-                        }
-                    }
-                }
+                CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
+                
+                childProps.addAll(tempChildResource.getProperties(oarg.Properties));
             
             XRow xRow = new CMISRow(childProps);
             open_result.add(xRow);
@@ -612,50 +512,14 @@ private XRow getPropertyValues(Property[] request)
         List<String> answers = new ArrayList<String>();
         
         answers.add(cmisContent.getId());
+        
         if(request == null)
         {
             CMISPropertySetInfo propSetInfo = new CMISPropertySetInfo(m_xContext);
             request = propSetInfo.getProperties();
         }        
-        if(isFolder())
-        {
-            for(Property p:request)
-            {
-                if (p.Name.equalsIgnoreCase("MediaType")) 
-                {
-                    answers.add(null);                
-                }
-                else if(p.Name.equalsIgnoreCase("ContentType"))
-                    answers.add("application/cmis-folder");
-                else if(p.Name.equalsIgnoreCase("Size"))
-                {
-                    String queryString;
-                    queryString = "SELECT " + CMISConstants.propertiesHashMap.get("Size") + " FROM cmis:document WHERE IN_TREE(\'" + id + "\')";
-                    long size = 0;
-                    for (QueryResult qR : connected_session.query(queryString, false)) 
-                    {
-                          size += Long.parseLong(qR.getPropertyValueById("cmis:contentStreamLength").toString());
-                    }
-                    answers.add(String.valueOf(size));
-                }
-                else if(CMISConstants.propertiesHashMap.containsKey(p.Name))
-                    answers.add(cmisContent.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
-                else
-                    answers.add(null);
-            }
-        }
-        else
-        {
-            for(Property p:request)
-            {
-                if(p.Name.equalsIgnoreCase("ContentType"))
-                    answers.add("application/cmis-document");
-                else if(CMISConstants.propertiesHashMap.containsKey(p.Name))
-                    answers.add(cmisContent.getPropertyValue(CMISConstants.propertiesHashMap.get(p.Name)).toString());
-                else
-                    answers.add(null);
-            }
-        }
+        answers.addAll(resourceManager.getProperties(request));
+        
         XRow xRet;
         xRet = new CMISRow(answers);
         
@@ -684,13 +548,10 @@ private XRow getPropertyValues(Property[] request)
                     if(exists)
                     {
                         String title = AnyConverter.toString(p.Value);
-                    
-                        Map<String,String> updateProperties = new HashMap<String,String>();
-                        updateProperties.put(PropertyIds.NAME, title);
-                    
+                                                                
                         try
                         {                                          
-                            cmisContent.updateProperties(updateProperties);
+                            resourceManager.setName(title);
                             ans[index] = null;
                         }
                         catch(CmisNameConstraintViolationException e)
@@ -711,6 +572,7 @@ private XRow getPropertyValues(Property[] request)
                             path = path+"/"+AnyConverter.toString(p.Value);
                             xContentid = new CMISContentIdentifier(m_xContext, path);
                             ans[index] = null;
+                            nameSet = true;
                         }
                     }
                 }   

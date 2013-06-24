@@ -178,26 +178,15 @@ public class CMISRow implements com.sun.star.sdbc.XRow {
             throw new SQLException();
         }
         
-        if (!s.startsWith("java.util.GregorianCalendar")) {
-            throw new UnsupportedOperationException("Datatype Mismatch");
-        } else {
-            short year;
-            year = Short.parseShort(s.substring(s.indexOf("YEAR") + 5, s.indexOf("YEAR") + 9));
-            short month;
-            try {
-                month = Short.parseShort(s.substring(s.indexOf("MONTH") + 6, s.indexOf("MONTH") + 8));
-            } catch (NumberFormatException e) {
-                month = Short.parseShort(s.substring(s.indexOf("MONTH") + 6, s.indexOf("MONTH") + 7));
-            }
-            short day;
-            try {
-                day = Short.parseShort(s.substring(s.indexOf("DAY_OF_MONTH") + 13, s.indexOf("DAY_OF_MONTH") + 15));
-            } catch (NumberFormatException e) {
-                day = Short.parseShort(s.substring(s.indexOf("DAY_OF_MONTH") + 13, s.indexOf("DAY_OF_MONTH") + 14));
-            }
-            Date d = new Date(day, month, year);
-            return d;
-        }
+        Date d = new Date();
+        int position = s.indexOf("/");
+        d.Day = Short.parseShort(s.substring(0,position));
+        
+        d.Month = Short.parseShort(s.substring(position+1, s.indexOf("/", position+1)));
+        position = s.indexOf("/", position+1);
+        d.Year = Short.parseShort(s.substring(position+1));
+        
+        return d;
     }
 
     public Time getTime(int arg0) throws SQLException {
