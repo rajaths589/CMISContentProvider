@@ -17,9 +17,9 @@ import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
+import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
-import com.sun.star.sdbc.SQLException;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.ucb.ContentInfo;
 import com.sun.star.ucb.ContentInfoAttribute;
@@ -35,8 +35,6 @@ import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -194,7 +192,7 @@ public final class CMISContent extends ComponentBase
 
     // com.sun.star.beans.XPropertySetInfoChangeNotifier:
     public void addPropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {
-        // TODO: Insert your implementation for "addPropertySetInfoChangeListener" here.
+        // TODO: Insert your implementation for "addPropertySetInfoChangeListener" here.       
     }
 
     public void removePropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {
@@ -257,7 +255,7 @@ public final class CMISContent extends ComponentBase
         return 0;
     }
 
-    public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException {
+    public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException {
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
             XCommandInfo xRet = new CMISCommandInfo(m_xContext);
@@ -357,7 +355,11 @@ public final class CMISContent extends ComponentBase
         else if(aCommand.Name.equalsIgnoreCase("Insert"))
         {
             InsertCommandArgument insertArg = (InsertCommandArgument) AnyConverter.toObject(InsertCommandArgument.class, aCommand.Argument);
-            return insert(insertArg);
+            try {
+                return insert(insertArg);
+            } catch (java.io.IOException ex) {
+                throw new IllegalArgumentException("IO stream failure");
+            }
         }
 
         return com.sun.star.uno.Any.VOID;
@@ -376,7 +378,7 @@ public final class CMISContent extends ComponentBase
     }
     
     //My method
-    private Object insert(InsertCommandArgument iArg) throws NotConnectedException, IOException
+    private Object insert(InsertCommandArgument iArg) throws NotConnectedException, IOException, java.io.IOException
     {
         if(exists)
         {
@@ -385,19 +387,9 @@ public final class CMISContent extends ComponentBase
                 // To-be tested
                 Document docContent = (Document)cmisContent;
                 ContentStream conStream;
-                byte buffer[][] = new byte[1][1];
-                int readSize  = iArg.Data.readBytes(buffer, 1024);
-                ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
-                while(readSize==1024)
-                {
-                    byteOutput.write(buffer[0], 0, 1024);
-                    readSize  = iArg.Data.readBytes(buffer, 1024);
-                }
-                byteOutput.write(buffer[0], 0, 1024);
+                com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter inputStr = new XInputStreamToInputStreamAdapter(iArg.Data);
                 
-                ByteArrayInputStream byteInp = new ByteArrayInputStream(byteOutput.toByteArray());
-                
-                conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),iArg.Data.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  byteInp);
+                conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),inputStr.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  inputStr);
                 
                 docContent.setContentStream(conStream,false);
                 
@@ -448,19 +440,8 @@ public final class CMISContent extends ComponentBase
                     docProps.put(PropertyIds.NAME, xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1));
                     docProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.FOLDER_BASETYPE_ID);                   
                     ContentStream conStream;
-                    byte buffer[][] = new byte[1][1];
-                    int readSize  = iArg.Data.readBytes(buffer, 1024);
-                    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
-                    while(readSize==1024)
-                    {
-                        byteOutput.write(buffer[0], 0, 1024);
-                        readSize  = iArg.Data.readBytes(buffer, 1024);
-                    }
-                    byteOutput.write(buffer[0], 0, 1024);
-                    
-                    ByteArrayInputStream byteInp = new ByteArrayInputStream(byteOutput.toByteArray());
-                
-                    conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),iArg.Data.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  byteInp);
+                    XInputStreamToInputStreamAdapter inpStream = new XInputStreamToInputStreamAdapter(iArg.Data);
+                    conStream = connected_session.getObjectFactory().createContentStream(cmisContent.getName(),inpStream.available() , cmisContent.getPropertyValue("cmis:contentStreamLength").toString(),  inpStream);
                     parent.createDocument(docProps, conStream, VersioningState.NONE);
                     exists = true;
                     processIdentifier(xContentid.getContentIdentifier());
