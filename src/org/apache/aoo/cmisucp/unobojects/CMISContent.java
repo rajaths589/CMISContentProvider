@@ -406,11 +406,7 @@ public final class CMISContent extends ComponentBase
             arg.Id = xContentid;            
             resourceManager.delete();
             contentListenerNotifier(arg);
-        }
-        else if(aCommand.Name.equalsIgnoreCase("search"))
-        {
-            SearchCommandArgument searchArg = (SearchCommandArgument) AnyConverter.toObject(SearchCommandArgument.class, aCommand.Argument);                       
-        }   
+        }        
         return com.sun.star.uno.Any.VOID;
     }
     
