@@ -55,8 +55,9 @@ public class CMISConnect {
         session_parameter.put(SessionParameter.REPOSITORY_ID, repositoryID);
         
         SessionFactory factory = SessionFactoryImpl.newInstance();
-        
+                
         connected_session = factory.createSession(session_parameter);
+                
         root = connected_session.getRootFolder();
         
         content = connected_session.getObjectByPath(relative_path);

@@ -4,6 +4,8 @@ import com.sun.star.beans.Property;
 import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.UnknownPropertyException;
+import com.sun.star.beans.XPropertiesChangeListener;
+import com.sun.star.beans.XPropertyChangeListener;
 import com.sun.star.beans.XPropertySetInfo;
 import com.sun.star.io.BufferSizeExceededException;
 import com.sun.star.io.IOException;
@@ -40,7 +42,9 @@ import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
@@ -92,7 +96,7 @@ public final class CMISContent extends ComponentBase
     private String path;
     CMISResourceManager resourceManager;
 
-    private List<XContentEventListener> contentEventListeners = new ArrayList<XContentEventListener>();
+    private List<XContentEventListener> contentEventListeners = new ArrayList<XContentEventListener>();    
     
     public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier)  {
         
@@ -209,7 +213,7 @@ public final class CMISContent extends ComponentBase
 
     // com.sun.star.beans.XPropertiesChangeNotifier:
     public void addPropertiesChangeListener(String[] PropertyNames, com.sun.star.beans.XPropertiesChangeListener Listener) {
-        // TODO: Insert your implementation for "addPropertiesChangeListener" here.
+        
     }
 
     public void removePropertiesChangeListener(String[] PropertyNames, com.sun.star.beans.XPropertiesChangeListener Listener) {
@@ -283,13 +287,17 @@ public final class CMISContent extends ComponentBase
         {            
             Property[] rProperties;
             rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);
-            log.info("getPropertyValues()");
+            log.info("getPropertyValues()");            
             return getPropertyValues(rProperties);
         }
         else if (aCommand.Name.equalsIgnoreCase("setPropertyValues")) 
         {
             PropertyValue[] pValues;
+            try{
             pValues = (PropertyValue[]) AnyConverter.toArray(aCommand.Argument);
+            }catch(Exception e){
+                throw new IllegalArgumentException("Incompatible argument");
+            }                
             log.info("setPropertyValues()");
             return setPropertyValues(pValues);
         }
@@ -298,8 +306,12 @@ public final class CMISContent extends ComponentBase
             log.info("open()");
 
             OpenCommandArgument2 openArg;
-            openArg = (OpenCommandArgument2) AnyConverter.toObject(OpenCommandArgument2.class, aCommand.Argument);
-
+            try{
+                openArg = (OpenCommandArgument2) AnyConverter.toObject(OpenCommandArgument2.class, aCommand.Argument);
+            }catch(Exception e){
+                throw new IllegalArgumentException("Unsupported argument");
+            }
+            
             if (isFolder()) {
                 if ((openArg.Mode == OpenMode.ALL) || (openArg.Mode == OpenMode.DOCUMENTS) || (openArg.Mode == OpenMode.FOLDERS)) {
                     XDynamicResultSet xRet;
@@ -362,22 +374,44 @@ public final class CMISContent extends ComponentBase
         }
         else if(aCommand.Name.equalsIgnoreCase("CreateNewContent"))
         {
-            ContentInfo info = (ContentInfo) AnyConverter.toObject(ContentInfo.class, aCommand.Argument);
+            ContentInfo info;
+            try{
+                info = (ContentInfo) AnyConverter.toObject(ContentInfo.class, aCommand.Argument);
+            }catch(Exception e){
+                throw new IllegalArgumentException("Incompatible argument");
+            }
             return createNewContent(info);
         }
         else if(aCommand.Name.equalsIgnoreCase("Insert"))
         {
-            InsertCommandArgument insertArg = (InsertCommandArgument) AnyConverter.toObject(InsertCommandArgument.class, aCommand.Argument);
+            InsertCommandArgument insertArg;
+            try{
+                insertArg = (InsertCommandArgument) AnyConverter.toObject(InsertCommandArgument.class, aCommand.Argument);
+            }catch(Exception e){
+                throw new IllegalArgumentException("incompatible argument");
+            }                
             try {
                 return insert(insertArg);
             } catch (java.io.IOException ex) {
-                throw new IllegalArgumentException("IO stream failure");
+                throw new IllegalArgumentException("IO stream failure. Illegal datasink");
             }
         }
         else if(aCommand.Name.equalsIgnoreCase("transfer"))
         {
-            TransferInfo aTransInfo = (TransferInfo) AnyConverter.toObject(TransferInfo.class, aCommand.Argument);
-            CMISConnect transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
+            TransferInfo aTransInfo;
+            try{
+                aTransInfo = (TransferInfo) AnyConverter.toObject(TransferInfo.class, aCommand.Argument);            
+            }catch(Exception e){
+                throw new IllegalArgumentException("Incompatible Transfer Argumnet");
+            }
+            
+            CMISConnect transferConnect;
+            try{
+            transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
+            }catch(CmisBaseException e)
+            {
+                throw new IllegalArgumentException("Wrong repository data. Probably usernam,password/soruceURL is wrong");
+            }
             //Name Clash not implemented.
             try 
             {
@@ -402,7 +436,9 @@ public final class CMISContent extends ComponentBase
             arg.Action = ContentAction.DELETED;
             arg.Content = this;
             arg.Id = xContentid;            
+            
             resourceManager.delete();
+            
             contentListenerNotifier(arg);
         }        
         return com.sun.star.uno.Any.VOID;
