@@ -1,5 +1,6 @@
 package org.apache.aoo.cmisucp.unobojects;
 
+import com.sun.star.awt.ActionEvent;
 import com.sun.star.beans.Property;
 import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyValue;
@@ -20,6 +21,8 @@ import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.ucb.ContentAction;
+import com.sun.star.ucb.ContentEvent;
 import com.sun.star.ucb.ContentInfo;
 import com.sun.star.ucb.ContentInfoAttribute;
 import com.sun.star.ucb.InsertCommandArgument;
@@ -31,6 +34,7 @@ import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
 import com.sun.star.ucb.XContent;
+import com.sun.star.ucb.XContentEventListener;
 import com.sun.star.ucb.XContentIdentifier;
 import com.sun.star.ucb.XDynamicResultSet;
 import com.sun.star.uno.Any;
@@ -51,7 +55,6 @@ import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.util.FileUtils;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
-import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
@@ -90,6 +93,8 @@ public final class CMISContent extends ComponentBase
     
     private String path;
     CMISResourceManager resourceManager;
+
+    private List<XContentEventListener> contentEventListeners = new ArrayList<XContentEventListener>();
     
     public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier)  {
         
@@ -233,12 +238,17 @@ public final class CMISContent extends ComponentBase
         return contentType;
     }
 
+    private void contentListenerNotifier(ContentEvent event)
+    {
+        for(XContentEventListener eventListener:contentEventListeners)
+            eventListener.contentEvent(event);
+    }
     public void addContentEventListener(com.sun.star.ucb.XContentEventListener Listener) {
-        // TODO: Insert your implementation for "addContentEventListener" here.
+        contentEventListeners.add(Listener);
     }
 
     public void removeContentEventListener(com.sun.star.ucb.XContentEventListener Listener) {
-        // TODO: Insert your implementation for "removeContentEventListener" here.
+        contentEventListeners.remove(Listener);
     }
 
     // com.sun.star.ucb.XCommandInfoChangeNotifier:
@@ -390,7 +400,12 @@ public final class CMISContent extends ComponentBase
         }
         else if(aCommand.Name.equalsIgnoreCase("delete"))
         {
+            ContentEvent arg = new ContentEvent();
+            arg.Action = ContentAction.DELETED;
+            arg.Content = this;
+            arg.Id = xContentid;            
             resourceManager.delete();
+            contentListenerNotifier(arg);
         }
         else if(aCommand.Name.equalsIgnoreCase("search"))
         {
@@ -419,16 +434,25 @@ public final class CMISContent extends ComponentBase
             if(!is_folder)
             {
                 // To-be tested
+                ContentEvent arg = new ContentEvent();
+                arg.Content = this;
+                arg.Id = xContentid;
+                arg.Action = ContentAction.INSERTED;                
                 resourceManager.setInputStream(iArg.Data);
+                contentListenerNotifier(arg);
                 return null;
             }
             else
             {
                 Folder parentFolder = resourceManager.getParent();
                 FileUtils.delete(resourceManager.getID(),connected_session);
-                
+                ContentEvent arg = new ContentEvent();
+                arg.Action = ContentAction.INSERTED;
+                arg.Content = this;
+                arg.Id = xContentid;
                 cmisContent  = FileUtils.createFolder(parentFolder, path.substring(6,path.lastIndexOf("/")+1), "cmis:folder");
                 resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);
+                contentListenerNotifier(arg);
                 // Content Event to be added.
                 return null;
             }
@@ -443,8 +467,13 @@ public final class CMISContent extends ComponentBase
                    processIdentifier(parentUri);
                    if(resourceManager.createFolder(xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1)))
                    {
+                        ContentEvent arg = new ContentEvent();
+                        arg.Action = ContentAction.INSERTED;
+                        arg.Content = this;
+                        arg.Id = xContentid;
                         exists = true;                        
                         processIdentifier(xContentid.getContentIdentifier());
+                        contentListenerNotifier(arg);
                         //ContentEvent to be created
                    }
                }
@@ -463,7 +492,12 @@ public final class CMISContent extends ComponentBase
                     if(resourceManager.createDocument(iArg.Data,xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1), "txt/plain"))
                     {
                         exists = true;
+                        ContentEvent arg = new ContentEvent();
+                        arg.Action = ContentAction.INSERTED;
+                        arg.Content = this;
+                        arg.Id = xContentid;
                         processIdentifier(xContentid.getContentIdentifier());
+                        contentListenerNotifier(arg);
                     }
                 }
                 else

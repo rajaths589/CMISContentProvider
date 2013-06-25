@@ -35,8 +35,7 @@ public final class CMISCommandInfo extends WeakBase
         supported_commands.add(new CommandInfo("synchronize",-1,Type.ANY));
         supported_commands.add(new CommandInfo("close", -1, Type.VOID));
         supported_commands.add(new CommandInfo("delete",-1,Type.BOOLEAN));
-        supported_commands.add(new CommandInfo("insert",-1,Type.ANY));
-        supported_commands.add(new CommandInfo("search",-1,Type.ANY));
+        supported_commands.add(new CommandInfo("insert",-1,Type.ANY));        
         supported_commands.add(new CommandInfo("transfer",-1,Type.ANY));
         supported_commands.add(new CommandInfo("createNewContent",-1,Type.ANY));
         supported_commands.add(new CommandInfo("CreatableContentsInfo",-1,Type.ANY));
