@@ -8,6 +8,7 @@ import com.sun.star.beans.Property;
 import com.sun.star.io.XInputStream;
 import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
+import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.util.Date;
 import java.io.IOException;
@@ -20,12 +21,14 @@ import java.util.Map;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.ItemIterable;
 import org.apache.chemistry.opencmis.client.api.ObjectType;
 import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
+import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 
@@ -40,12 +43,14 @@ public class CMISResourceManager {
     private Session connected;   
     private Folder folderObject;
     private Document documentObject;
+    private List<CmisObject> createdObjects;
     
     public CMISResourceManager(XComponentContext xContext, CmisObject ob, Session s)
     {
         object = ob;
         connected = s;
         generateFolderorDocument();
+        createdObjects = new ArrayList<CmisObject>();
     }
     
     private void generateFolderorDocument()
@@ -323,12 +328,71 @@ public class CMISResourceManager {
             return false;
                 
     }
+    
     public Folder getParent()
     {        
         if(isFolder())
             return getFolder().getParents().get(0); //Multi-filing unsupported.
         else
             return null;
+    }
+    
+    public ItemIterable<CmisObject> getChildren()
+    {
+        if(isDocument())
+            return null;
+        else if(isFolder())
+            return getFolder().getChildren();
+        else
+            return null;
+    }
+        
+    
+    public boolean transfer(CmisObject transferObject, Session transferSession, String newName ) throws IOException, InteractiveBadTransferURLException
+    {
+        if(isDocument())
+            return false;
+        try
+        {            
+        
+            CMISResourceManager transferResource = new CMISResourceManager(m_Context, transferObject, transferSession);
+            if(transferResource.isDocument())
+            {
+                if(createDocument(transferResource.getInputStream(), newName, transferResource.getMimeType()))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }            
+            }
+            else if(transferResource.isFolder())
+            {
+                createFolder(transferResource.getName());
+                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+transferResource.getName()), connected);
+                for(CmisObject child:transferResource.getFolder().getChildren())
+                {                                
+                    if(newTransferFolder.transfer(child, connected,child.getName()))
+                        return true;
+                    else
+                        return false;
+                }            
+            }
+        }
+        catch(Exception e)
+        {            
+            throw new InteractiveBadTransferURLException();            
+        }
+        return false;
+    }    
+    
+    public void delete()
+    {        
+        if(isDocument())
+            getDocument().deleteAllVersions();
+        if(isFolder())
+            getFolder().deleteTree(true, UnfileObject.UNFILE, false);            
     }
 }
 

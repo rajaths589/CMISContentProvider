@@ -23,8 +23,11 @@ import com.sun.star.sdbc.XRow;
 import com.sun.star.ucb.ContentInfo;
 import com.sun.star.ucb.ContentInfoAttribute;
 import com.sun.star.ucb.InsertCommandArgument;
+import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
+import com.sun.star.ucb.SearchCommandArgument;
+import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
 import com.sun.star.ucb.XContent;
@@ -48,6 +51,7 @@ import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.util.FileUtils;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
+import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
@@ -256,7 +260,7 @@ public final class CMISContent extends ComponentBase
         return 0;
     }
 
-    public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException {
+    public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
             XCommandInfo xRet = new CMISCommandInfo(m_xContext);
@@ -342,7 +346,7 @@ public final class CMISContent extends ComponentBase
                 else
                     throw new IllegalArgumentException("Modes not supported for this content");
                                 
-            }
+            }        
         }
         else if(aCommand.Name.equalsIgnoreCase("CreatableContentsInfo"))
         {            
@@ -362,7 +366,36 @@ public final class CMISContent extends ComponentBase
                 throw new IllegalArgumentException("IO stream failure");
             }
         }
-
+        else if(aCommand.Name.equalsIgnoreCase("transfer"))
+        {
+            TransferInfo aTransInfo = (TransferInfo) AnyConverter.toObject(TransferInfo.class, aCommand.Argument);
+            CMISConnect transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
+            //Name Clash not implemented.
+            try 
+            {
+                if(aTransInfo.NewTitle!=null)
+                    resourceManager.transfer(transferConnect.getObject(), transferConnect.getSession(), aTransInfo.NewTitle);
+                else
+                    resourceManager.transfer(transferConnect.getObject(), transferConnect.getSession(), transferConnect.getObject().getName());
+            }    
+            catch (java.io.IOException ex) 
+            {
+                throw new IllegalArgumentException();
+            }
+            if(aTransInfo.MoveData==true)
+            {                
+                CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect.getObject(), transferConnect.getSession());
+                transferRes.delete();
+            }            
+        }
+        else if(aCommand.Name.equalsIgnoreCase("delete"))
+        {
+            resourceManager.delete();
+        }
+        else if(aCommand.Name.equalsIgnoreCase("search"))
+        {
+            SearchCommandArgument searchArg = (SearchCommandArgument) AnyConverter.toObject(SearchCommandArgument.class, aCommand.Argument);                       
+        }   
         return com.sun.star.uno.Any.VOID;
     }
     

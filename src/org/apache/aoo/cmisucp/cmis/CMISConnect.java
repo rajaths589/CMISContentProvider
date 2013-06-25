@@ -70,6 +70,7 @@ public class CMISConnect {
         username = user;
         password = pwd;
         decodeURI(uri);
+        contentType = content.getBaseTypeId().value();
     }
         
     private boolean connectToRepository( String address, String repoID )
