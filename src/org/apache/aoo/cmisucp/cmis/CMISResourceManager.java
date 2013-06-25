@@ -43,14 +43,14 @@ public class CMISResourceManager {
     private Session connected;   
     private Folder folderObject;
     private Document documentObject;
-    private List<CmisObject> createdObjects;
+    public boolean isFolder;
+    public boolean isDocument;
     
     public CMISResourceManager(XComponentContext xContext, CmisObject ob, Session s)
     {
         object = ob;
         connected = s;
-        generateFolderorDocument();
-        createdObjects = new ArrayList<CmisObject>();
+        generateFolderorDocument();    
     }
     
     private void generateFolderorDocument()
@@ -59,11 +59,15 @@ public class CMISResourceManager {
         {
             folderObject = (Folder)object;
             documentObject = null;
+            isFolder = true;
+            isDocument = false;
         }
         else if(isDocument())
         {
             folderObject = null;
             documentObject = (Document)object;
+            isDocument = true;
+            isFolder = false;
         }
     }
     
@@ -93,7 +97,7 @@ public class CMISResourceManager {
     
     public Folder getFolder()
     {
-        if(isFolder())
+        if(isFolder)
             return folderObject;
         else
             return null;
@@ -102,7 +106,7 @@ public class CMISResourceManager {
     
     public Document getDocument()
     {
-        if(isDocument())
+        if(isDocument)
             return documentObject;
         else
             return null;            
@@ -132,7 +136,7 @@ public class CMISResourceManager {
     
     public String getPath()
     {
-        if(isFolder())
+        if(isFolder)
             return object.getPropertyValue(PropertyIds.PATH).toString();
         else
         {
@@ -142,7 +146,7 @@ public class CMISResourceManager {
     
     public long getSize()
     {
-        if(isDocument())
+        if(isDocument)
             return getDocument().getContentStreamLength();
         else
         {
@@ -161,7 +165,7 @@ public class CMISResourceManager {
     
     public String getMimeType()
     {
-        if(isDocument())
+        if(isDocument)
             return getDocument().getContentStreamMimeType();
         else
             return null;
@@ -169,9 +173,9 @@ public class CMISResourceManager {
     
     public String getContentType()
     {
-        if(isDocument())
+        if(isDocument)
             return "application/cmis-document";
-        else if(isFolder())
+        else if(isFolder)
             return "application/cmis-folder";
         else
             return null;
@@ -203,7 +207,7 @@ public class CMISResourceManager {
     
     public XInputStream getInputStream()
     {
-        if(isDocument())
+        if(isDocument)
         {
             com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter xInputStream;
             xInputStream = new InputStreamToXInputStreamAdapter(getDocument().getContentStream().getStream());
@@ -215,7 +219,7 @@ public class CMISResourceManager {
     
     public boolean setInputStream(XInputStream xInputStream) throws IOException
     {
-        if(isDocument())
+        if(isDocument)
         {
             XInputStreamToInputStreamAdapter inputStream = new XInputStreamToInputStreamAdapter(xInputStream);
             try
@@ -261,9 +265,9 @@ public class CMISResourceManager {
             else if(p.Name.equalsIgnoreCase("Title"))
                 returnProperties.add(getName());
             else if(p.Name.equalsIgnoreCase("IsFolder"))
-                returnProperties.add(String.valueOf(isFolder()));
+                returnProperties.add(String.valueOf(isFolder));
             else if(p.Name.equalsIgnoreCase("IsDocument"))
-                returnProperties.add(String.valueOf(isFolder()));
+                returnProperties.add(String.valueOf(isFolder));
             else if(p.Name.equalsIgnoreCase("DateCreated"))
                 returnProperties.add(getCreationDate().Day+"/"+getCreationDate().Month+"/"+getCreationDate().Year);
             else if(p.Name.equalsIgnoreCase("DateModified"))
@@ -281,13 +285,13 @@ public class CMISResourceManager {
     
     public boolean createDocument(XInputStream input, String name, String MimeType) throws IOException
     {
-        if(isDocument())
+        if(isDocument)
             return false;
-        else if(isFolder())
+        else if(isFolder)
         {
             Map<String,String> newDocProps = new HashMap<String, String>();
             newDocProps.put(PropertyIds.NAME, name);
-            newDocProps.put(PropertyIds.BASE_TYPE_ID, BaseTypeId.CMIS_DOCUMENT.value());
+            newDocProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.DOCUMENT_BASETYPE_ID);
             
             XInputStreamToInputStreamAdapter inpStream = new XInputStreamToInputStreamAdapter(input);
             ContentStream stream = connected.getObjectFactory().createContentStream(name, inpStream.available(),MimeType, inpStream);
@@ -307,9 +311,9 @@ public class CMISResourceManager {
     
     public boolean createFolder(String name)
     {
-        if(isDocument())
+        if(isDocument)
             return false;
-        else if(isFolder())
+        else if(isFolder)
         {
             Map<String,String> newFolderProps = new HashMap<String, String>();
             newFolderProps.put(PropertyIds.NAME, name);
@@ -331,7 +335,7 @@ public class CMISResourceManager {
     
     public Folder getParent()
     {        
-        if(isFolder())
+        if(isFolder)
             return getFolder().getParents().get(0); //Multi-filing unsupported.
         else
             return null;
@@ -339,44 +343,34 @@ public class CMISResourceManager {
     
     public ItemIterable<CmisObject> getChildren()
     {
-        if(isDocument())
+        if(isDocument)
             return null;
-        else if(isFolder())
+        else if(isFolder)
             return getFolder().getChildren();
         else
             return null;
     }
         
     
-    public boolean transfer(CmisObject transferObject, Session transferSession, String newName ) throws IOException, InteractiveBadTransferURLException
+    public void transfer(CmisObject transferObject, Session transferSession, String newName ) throws IOException, InteractiveBadTransferURLException
     {
-        if(isDocument())
-            return false;
+        if(isDocument)
+            return;
         try
         {            
         
             CMISResourceManager transferResource = new CMISResourceManager(m_Context, transferObject, transferSession);
-            if(transferResource.isDocument())
+            if(transferResource.isDocument)
             {
-                if(createDocument(transferResource.getInputStream(), newName, transferResource.getMimeType()))
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }            
+                createDocument(transferResource.getInputStream(), newName, transferResource.getMimeType());                            
             }
-            else if(transferResource.isFolder())
+            else if(transferResource.isFolder)
             {
                 createFolder(transferResource.getName());
                 CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+transferResource.getName()), connected);
                 for(CmisObject child:transferResource.getFolder().getChildren())
                 {                                
-                    if(newTransferFolder.transfer(child, connected,child.getName()))
-                        return true;
-                    else
-                        return false;
+                    newTransferFolder.transfer(child, connected,child.getName());                                        
                 }            
             }
         }
@@ -384,14 +378,13 @@ public class CMISResourceManager {
         {            
             throw new InteractiveBadTransferURLException();            
         }
-        return false;
     }    
     
     public void delete()
     {        
-        if(isDocument())
+        if(isDocument)
             getDocument().deleteAllVersions();
-        if(isFolder())
+        if(isFolder)
             getFolder().deleteTree(true, UnfileObject.UNFILE, false);            
     }
 }

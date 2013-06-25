@@ -1,6 +1,5 @@
 package org.apache.aoo.cmisucp.unobojects;
 
-import com.sun.star.awt.ActionEvent;
 import com.sun.star.beans.Property;
 import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyValue;
@@ -29,7 +28,6 @@ import com.sun.star.ucb.InsertCommandArgument;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
-import com.sun.star.ucb.SearchCommandArgument;
 import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
