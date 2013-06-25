@@ -115,15 +115,15 @@ public class CMISConnect {
         int prompt = URI.indexOf("://")+3;
         int indexOfServerPath = URI.indexOf('/', prompt);
         int indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
-        while(!connectToRepository(URI.substring(0, indexOfServerPath),URI.substring(indexOfServerPath+1, indexOfRepoID+1)))        
+        while(!connectToRepository(URI.substring(0, indexOfServerPath),URI.substring(indexOfServerPath+1, indexOfRepoID)))        
         {
             prompt = indexOfServerPath;
-            indexOfServerPath = URI.indexOf('/', prompt);
+            indexOfServerPath = URI.indexOf('/', prompt+1);
             indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
         }        
         if(URI.startsWith("path", indexOfRepoID+1))
         {
-            String localpath = URI.substring(URI.indexOf('='+1));
+            String localpath = URI.substring(URI.indexOf('=')+1);
             // support for multiple parameters
             // for versioning
             connectToObject(localpath);
