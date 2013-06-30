@@ -96,7 +96,7 @@ public class CMISResourceManager {
     }
     
     public Folder getFolder()
-    {
+    {        
         if(isFolder)
             return folderObject;
         else
