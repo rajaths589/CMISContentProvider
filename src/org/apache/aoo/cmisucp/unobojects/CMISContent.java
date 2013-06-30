@@ -2,10 +2,10 @@ package org.apache.aoo.cmisucp.unobojects;
 
 import com.sun.star.beans.Property;
 import com.sun.star.beans.PropertyAttribute;
+import com.sun.star.beans.PropertyChangeEvent;
 import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.XPropertiesChangeListener;
-import com.sun.star.beans.XPropertyChangeListener;
 import com.sun.star.beans.XPropertySetInfo;
 import com.sun.star.io.BufferSizeExceededException;
 import com.sun.star.io.IOException;
@@ -42,6 +42,7 @@ import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,9 +98,10 @@ public final class CMISContent extends ComponentBase
     CMISResourceManager resourceManager;
 
     private List<XContentEventListener> contentEventListeners = new ArrayList<XContentEventListener>();    
+    private Map<XPropertiesChangeListener,List<String>> propertiesChangeListeners = new HashMap<XPropertiesChangeListener,List<String>>();
     
     public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier)  {
-        
+                
         m_xContext = context;
         xContentid = xContentIdentifier;        
 
@@ -113,7 +115,7 @@ public final class CMISContent extends ComponentBase
     }
 
     public CMISContent(XComponentContext context, String type, String uri)
-    {
+    {        
         m_xContext = context;
         contentType = type;
         
@@ -205,19 +207,21 @@ public final class CMISContent extends ComponentBase
     // com.sun.star.beans.XPropertySetInfoChangeNotifier:
     public void addPropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {
         // TODO: Insert your implementation for "addPropertySetInfoChangeListener" here.       
+        throw new UnsupportedOperationException();
     }
 
     public void removePropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {
         // TODO: Insert your implementation for "removePropertySetInfoChangeListener" here.
+        throw new UnsupportedOperationException();
     }
 
     // com.sun.star.beans.XPropertiesChangeNotifier:
     public void addPropertiesChangeListener(String[] PropertyNames, com.sun.star.beans.XPropertiesChangeListener Listener) {
-        
+        propertiesChangeListeners.put(Listener, Arrays.asList(PropertyNames));
     }
 
     public void removePropertiesChangeListener(String[] PropertyNames, com.sun.star.beans.XPropertiesChangeListener Listener) {
-        // TODO: Insert your implementation for "removePropertiesChangeListener" here.
+        propertiesChangeListeners.remove(Listener);
     }
 
     // com.sun.star.container.XChild:
@@ -510,7 +514,7 @@ public final class CMISContent extends ComponentBase
                else
                {
                 //throw some exception;
-                   ;
+                   throw new UnsupportedOperationException("Name not set");
                }
             }
             else
@@ -533,6 +537,7 @@ public final class CMISContent extends ComponentBase
                 else
                 {
                     //throw property values not set exception.
+                    throw new UnsupportedOperationException("Name not set");
                 }
             }
         }
@@ -644,11 +649,23 @@ private XRow getPropertyValues(Property[] request)
                 {
                     if(exists)
                     {
-                        String title = AnyConverter.toString(p.Value);
+                        String title;
+                        try{
+                            title = AnyConverter.toString(p.Value);
+                        }catch(Exception e){
+                            throw new IllegalArgumentException("Incompatible argument");
+                        }                            
                                                                 
                         try
-                        {                                          
+                        {
+                            PropertyChangeEvent event = new PropertyChangeEvent();
+                            event.PropertyName = "Title";
+                            event.PropertyHandle = -1;
+                            event.OldValue = resourceManager.getName();
+                            event.Further = false;
                             resourceManager.setName(title);
+                            event.NewValue = title;
+                            notifyPropertyListeners(event);
                             ans[index] = null;
                         }
                         catch(CmisNameConstraintViolationException e)
@@ -666,10 +683,22 @@ private XRow getPropertyValues(Property[] request)
                         String url;
                         if(xContentid==null)
                         {
-                            path = path+"/"+AnyConverter.toString(p.Value);
+                            try{
+                                path = path+"/"+AnyConverter.toString(p.Value);
+                            }catch(Exception e)
+                            {
+                                throw new IllegalArgumentException("Incompatible Argument");
+                            }
+                            PropertyChangeEvent event = new PropertyChangeEvent();
+                            event.Further = false;
+                            event.OldValue = null;
+                            event.PropertyName = "Title";
+                            event.PropertyHandle = -1;
                             xContentid = new CMISContentIdentifier(m_xContext, path);
+                            event.NewValue = p.Value;
                             ans[index] = null;
                             nameSet = true;
+                            notifyPropertyListeners(event);
                         }
                     }
                 }   
@@ -679,6 +708,22 @@ private XRow getPropertyValues(Property[] request)
             index ++;
         }
         return ans;
+    }
+    
+    private void notifyPropertyListeners(PropertyChangeEvent e)
+    {
+        PropertyChangeEvent eventArray[] = new PropertyChangeEvent[1];
+        eventArray[0] = e;
+        for(XPropertiesChangeListener xP:propertiesChangeListeners.keySet())
+        {
+            for(String s:propertiesChangeListeners.get(xP))
+            {
+                if(s.equals(e.PropertyName))
+                {
+                    xP.propertiesChange(eventArray);
+                }
+            }
+        }
     }
     public void abort(int CommandId)
     {
