@@ -38,7 +38,7 @@ public final class CMISContentProvider extends WeakBase
         XSingleComponentFactory xFactory = null;
 
         if ( sImplementationName.equals( m_implementationName ) )
-            xFactory = Factory.createComponentFactory(CMISContentProvider.class, m_serviceNames);
+            xFactory = CMISSingleComponentFactory.getComponentFactory();
         return xFactory;
     }
 
