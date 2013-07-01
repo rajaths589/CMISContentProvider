@@ -2,14 +2,14 @@ package org.apache.aoo.cmisucp;
 
 import com.sun.star.lang.XInitialization;
 import com.sun.star.lang.XSingleComponentFactory;
-import com.sun.star.lib.uno.helper.ComponentBase;
+import com.sun.star.lib.uno.helper.WeakBase;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.uno.UnoRuntime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public final class CMISSingleComponentFactory extends ComponentBase
+public final class CMISSingleComponentFactory extends WeakBase
    implements com.sun.star.lang.XSingleComponentFactory
 {
     private Object theInstance;
@@ -24,7 +24,7 @@ public final class CMISSingleComponentFactory extends ComponentBase
         //m_Context = context;        
         try{
         aClass = CMISContentProvider.class;
-        m_Constructor = aClass.getConstructor(params);
+        m_Constructor = aClass.getConstructor(params);        
         } catch(Exception e){
             Logger.getLogger(m_implementationName).log(Level.SEVERE,"Exception Caught",e);
         }
@@ -94,6 +94,7 @@ public final class CMISSingleComponentFactory extends ComponentBase
    
     public static XSingleComponentFactory getComponentFactory()
     {
+        Logger.getLogger(m_implementationName).log(Level.SEVERE, m_implementationName);
         return new CMISSingleComponentFactory();
     }
 }
