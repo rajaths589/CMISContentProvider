@@ -31,6 +31,7 @@ import com.sun.star.util.Date;
 import com.sun.star.util.DateTime;
 import com.sun.star.util.Time;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  *
@@ -43,7 +44,8 @@ public class CMISRow implements com.sun.star.sdbc.XRow {
     //private Set<String> ans;
     private List<String> ans;
     private static int lastArg;
-
+    private static final Logger log = Logger.getLogger(CMISRow.class.getName());
+    
     CMISRow(List<String> result) {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         ans = result;
@@ -77,9 +79,10 @@ public class CMISRow implements com.sun.star.sdbc.XRow {
 
     public boolean getBoolean(int arg0) throws SQLException {
         lastArg = arg0;
-
+        
         try {
             boolean b = Boolean.valueOf(ans.get(lastArg)).booleanValue();
+            log.info(String.valueOf(b));
             return b;
         } catch (NumberFormatException e) {
             throw new UnsupportedOperationException("Datatype Mismatch");

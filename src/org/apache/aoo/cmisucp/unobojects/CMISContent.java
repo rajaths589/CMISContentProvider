@@ -23,6 +23,7 @@ import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.ucb.ContentAction;
+import com.sun.star.ucb.ContentCreationException;
 import com.sun.star.ucb.ContentEvent;
 import com.sun.star.ucb.ContentInfo;
 import com.sun.star.ucb.ContentInfoAttribute;
@@ -100,7 +101,7 @@ public final class CMISContent extends ComponentBase
     private List<XContentEventListener> contentEventListeners = new ArrayList<XContentEventListener>();    
     private Map<XPropertiesChangeListener,List<String>> propertiesChangeListeners = new HashMap<XPropertiesChangeListener,List<String>>();
     
-    public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier)  {
+    public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier) throws ContentCreationException  {
                 
         m_xContext = context;
         xContentid = xContentIdentifier;        
@@ -114,7 +115,7 @@ public final class CMISContent extends ComponentBase
         
     }
 
-    public CMISContent(XComponentContext context, String type, String uri)
+    public CMISContent(XComponentContext context, String type, String uri) throws ContentCreationException
     {        
         m_xContext = context;
         contentType = type;
@@ -134,7 +135,7 @@ public final class CMISContent extends ComponentBase
     }
     
     //My method
-    public void processIdentifier(String uri) {
+    public void processIdentifier(String uri) throws ContentCreationException {
 
         uri = uri.substring(6);        
         
@@ -152,7 +153,7 @@ public final class CMISContent extends ComponentBase
         }
         catch(CmisBaseException e)
         {
-            exists = false;
+            exists = false;            
             if(e.getExceptionName().equalsIgnoreCase(CmisConnectionException.EXCEPTION_NAME))
             {
                 // To-Do . connected_session - not connected;
@@ -167,7 +168,7 @@ public final class CMISContent extends ComponentBase
             {
                 // throw some expception
             }
-            return;
+            throw new ContentCreationException();  
         }
         exists = true;
         setContentType();
@@ -305,7 +306,7 @@ public final class CMISContent extends ComponentBase
             log.info("setPropertyValues()");
             return setPropertyValues(pValues);
         }
-        else if (aCommand.Name.equalsIgnoreCase("open")) 
+        else if (aCommand.Name.equalsIgnoreCase("Open")) 
         {
             log.info("open()");
 
@@ -461,7 +462,7 @@ public final class CMISContent extends ComponentBase
     }
     
     //My method
-    private Object insert(InsertCommandArgument iArg) throws NotConnectedException, IOException, java.io.IOException
+    private Object insert(InsertCommandArgument iArg) throws NotConnectedException, IOException, java.io.IOException, ContentCreationException
     {
         if(exists)
         {
@@ -814,8 +815,12 @@ private XRow getPropertyValues(Property[] request)
 
     public com.sun.star.ucb.XContent createNewContent(com.sun.star.ucb.ContentInfo Info)
     {        
-        XContent xContent;
-        xContent = new CMISContent(m_xContext, Info.Type, path);
+        XContent xContent = null;
+        try {
+            xContent = new CMISContent(m_xContext, Info.Type, path);
+        } catch (ContentCreationException ex) {
+            Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+        }
         return xContent;
     }
 

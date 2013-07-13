@@ -5,11 +5,14 @@ import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.WeakBase;
+import com.sun.star.ucb.ContentCreationException;
 import com.sun.star.ucb.IllegalIdentifierException;
 import com.sun.star.ucb.XContent;
 import com.sun.star.ucb.XContentIdentifier;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.unobojects.CMISContent;
 import org.apache.aoo.cmisucp.unobojects.CMISContentIdentifier;
 
@@ -38,8 +41,7 @@ public final class CMISContentProvider extends WeakBase
         XSingleComponentFactory xFactory = null;
 
         if ( sImplementationName.equals( m_implementationName ) )
-            xFactory = CMISSingleComponentFactory.getComponentFactory();
-            //xFactory = Factory.createComponentFactory(CMISContentProvider.class, m_serviceNames);
+            xFactory = CMISSingleComponentFactory.getComponentFactory(m_implementationName,m_serviceNames);            
         return xFactory;
     }
 
@@ -107,8 +109,11 @@ public final class CMISContentProvider extends WeakBase
             return xRet;
         
         CMISContent cmisObj;
-        
-        cmisObj = new CMISContent(m_xContext, Identifier);
+        try {
+            cmisObj = new CMISContent(m_xContext, Identifier);
+        } catch (ContentCreationException ex) {
+            return null;
+        }
         registerNewContent(cmisObj,Identifier);            
         
         

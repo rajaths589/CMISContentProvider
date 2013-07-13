@@ -44,6 +44,9 @@ public final class CMISPropertySetInfo extends WeakBase
         available_properties.add(new Property("MediaType", -1,Type.STRING, PropertyAttribute.READONLY));
         available_properties.add(new Property("ContentType", -1, Type.STRING, PropertyAttribute.READONLY));
         available_properties.add(new Property("ID", -1, Type.STRING, PropertyAttribute.READONLY));
+        available_properties.add(new Property("CreatedBy", -1, Type.STRING, PropertyAttribute.READONLY));
+        available_properties.add(new Property("ModifiedBy", -1, Type.STRING, PropertyAttribute.READONLY));
+        available_properties.add(new Property("CheckinComment", -1,Type.STRING,PropertyAttribute.READONLY));        
     }            
     
     // com.sun.star.beans.XPropertySetInfo:

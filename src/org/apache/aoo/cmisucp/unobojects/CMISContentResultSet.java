@@ -18,6 +18,7 @@ import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.sdbc.SQLException;
 import com.sun.star.sdbc.XResultSetMetaData;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.ucb.ContentCreationException;
 import com.sun.star.ucb.XContentIdentifier;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
@@ -674,7 +675,12 @@ public final class CMISContentResultSet extends PropertySet
 
     public com.sun.star.ucb.XContent queryContent()
     {
-        CMISContent content = new CMISContent(m_xContext, xID);
+        CMISContent content;
+        try {
+            content = new CMISContent(m_xContext, xID);
+        } catch (ContentCreationException ex) {
+            return null;
+        }
         return content;
     }
 

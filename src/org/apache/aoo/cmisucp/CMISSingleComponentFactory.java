@@ -10,21 +10,24 @@ import java.util.logging.Logger;
 
 
 public final class CMISSingleComponentFactory extends WeakBase
-   implements com.sun.star.lang.XSingleComponentFactory
+   implements com.sun.star.lang.XSingleComponentFactory, com.sun.star.lang.XServiceInfo
 {
     private Object theInstance;
     private static final String m_implementationName = CMISSingleComponentFactory.class.getName();    
     private Class<?> aClass;
     private java.lang.reflect.Constructor m_Constructor;
-    
+    private final String m_sImplementationName;
+    private final String[] m_sSupportedServices;
 
-    private CMISSingleComponentFactory( ) 
+    private CMISSingleComponentFactory(String sImplementationName, String[] sSupportedServices ) 
     {
         Class params[] = new Class[]{XComponentContext.class};
+        m_sImplementationName = sImplementationName;
+        m_sSupportedServices = sSupportedServices;        
         //m_Context = context;        
         try{
         aClass = CMISContentProvider.class;
-        m_Constructor = aClass.getConstructor(params);        
+        m_Constructor = aClass.getConstructor(params);                
         } catch(Exception e){
             Logger.getLogger(m_implementationName).log(Level.SEVERE,"Exception Caught",e);
         }
@@ -92,9 +95,27 @@ public final class CMISSingleComponentFactory extends WeakBase
         }        
     }
    
-    public static XSingleComponentFactory getComponentFactory()
+    public static XSingleComponentFactory getComponentFactory(String impName, String[] suppServices)
     {
         Logger.getLogger(m_implementationName).log(Level.SEVERE, m_implementationName);
-        return new CMISSingleComponentFactory();
+        return new CMISSingleComponentFactory(impName,suppServices);
+    }
+
+    public String getImplementationName() {
+        return m_sImplementationName;
+    }
+
+    public boolean supportsService(String arg0) {
+        for(String s:m_sSupportedServices)
+        {
+            if(s.equals(arg0))
+                return true;
+        }
+        
+           return false;
+    }
+
+    public String[] getSupportedServiceNames() {
+        return m_sSupportedServices;
     }
 }

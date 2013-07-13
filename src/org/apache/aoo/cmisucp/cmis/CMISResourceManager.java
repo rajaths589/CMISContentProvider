@@ -6,7 +6,6 @@ package org.apache.aoo.cmisucp.cmis;
 
 import com.sun.star.beans.Property;
 import com.sun.star.io.XInputStream;
-import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.uno.XComponentContext;
@@ -18,6 +17,8 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
+import org.apache.aoo.cmisucp.unobojects.CMISInputStream;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -27,6 +28,7 @@ import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
+import org.apache.chemistry.opencmis.commons.enums.Action;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
@@ -45,9 +47,10 @@ public class CMISResourceManager {
     private Document documentObject;
     public boolean isFolder;
     public boolean isDocument;
+    private static final Logger log = Logger.getLogger(CMISResourceManager.class.getName());
     
     public CMISResourceManager(XComponentContext xContext, CmisObject ob, Session s)
-    {
+    {        
         object = ob;
         connected = s;
         generateFolderorDocument();    
@@ -94,6 +97,44 @@ public class CMISResourceManager {
         else
             return false;
     }
+    
+    public boolean canCheckOut()
+    {
+        if(isDocument)
+        {
+            if(getDocument().getAllowableActions().getAllowableActions().contains(Action.CAN_CHECK_OUT))
+                return true;
+            else
+                return false;
+        }
+        else
+            return false;
+        
+    }
+    
+    public boolean canCheckIn()
+    {
+        if(isDocument)
+        {
+            if(getDocument().getAllowableActions().getAllowableActions().contains(Action.CAN_CHECK_IN))
+                return true;
+            else
+                return false;
+        }
+        else
+            return false;
+    }
+    
+    public Document getVersionedDocument(String label)
+    {
+        if(isDocument)
+            for(Document d:getDocument().getAllVersions())
+                if(d.getVersionLabel().equalsIgnoreCase(label))
+                    return d;
+        
+        return null;
+    }
+    
     
     public Folder getFolder()
     {        
@@ -193,6 +234,24 @@ public class CMISResourceManager {
         return creationDate;
     }
     
+    public String getCreatedBy()
+    {
+        return object.getCreatedBy();
+    }
+    
+    public String getLastModifiedBy()
+    {
+        return object.getLastModifiedBy();
+    }
+    
+    public String getCheckinComment()
+    {        
+        if(isDocument)
+            return getDocument().getCheckinComment();
+        else
+            return null;
+    }
+    
     public Date getLastModifiedDate()
     {
         GregorianCalendar cal = object.getLastModificationDate();
@@ -209,8 +268,9 @@ public class CMISResourceManager {
     {
         if(isDocument)
         {
-            com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter xInputStream;
-            xInputStream = new InputStreamToXInputStreamAdapter(getDocument().getContentStream().getStream());
+            //com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter xInputStream;
+            //xInputStream = new InputStreamToXInputStreamAdapter(getDocument().getContentStream().getStream());
+            XInputStream xInputStream = new CMISInputStream(m_Context, getDocument());
             return xInputStream;
         }
         else
@@ -237,7 +297,7 @@ public class CMISResourceManager {
             return false;
         
     }
-    
+        
     public boolean setName(String newName)
     {
         Map<String,String> nameMap = new HashMap<String, String>();
@@ -260,6 +320,7 @@ public class CMISResourceManager {
         
         for(Property p:props)
         {
+            log.info(p.Name);
             if(p.Name.equalsIgnoreCase("ID"))
                 returnProperties.add(getID());
             else if(p.Name.equalsIgnoreCase("Title"))
@@ -267,7 +328,7 @@ public class CMISResourceManager {
             else if(p.Name.equalsIgnoreCase("IsFolder"))
                 returnProperties.add(String.valueOf(isFolder));
             else if(p.Name.equalsIgnoreCase("IsDocument"))
-                returnProperties.add(String.valueOf(isFolder));
+                returnProperties.add(String.valueOf(isDocument));
             else if(p.Name.equalsIgnoreCase("DateCreated"))
                 returnProperties.add(getCreationDate().Day+"/"+getCreationDate().Month+"/"+getCreationDate().Year);
             else if(p.Name.equalsIgnoreCase("DateModified"))
@@ -276,6 +337,14 @@ public class CMISResourceManager {
                 returnProperties.add(getMimeType());
             else if(p.Name.equalsIgnoreCase("ContentType"))
                 returnProperties.add(getContentType());
+            else if(p.Name.equalsIgnoreCase("CreatedBy"))
+                returnProperties.add(getCreatedBy());
+            else if(p.Name.equalsIgnoreCase("ModifiedBy"))
+                returnProperties.add(getLastModifiedBy());
+            else if(p.Name.equalsIgnoreCase("CheckinComment"))
+                returnProperties.add(getCheckinComment());
+            else if(p.Name.equalsIgnoreCase("Size"))
+                returnProperties.add(String.valueOf(getSize()));
             else
                 returnProperties.add(null);
         }
