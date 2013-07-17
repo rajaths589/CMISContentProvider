@@ -1,0 +1,1 @@
+The CMIS Universal Content Provider allows easy access to files stored in a file store that supports the open OASIS CMIS standard. 

@@ -1,3 +1,23 @@
+/**************************************************************
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * 
+ *************************************************************/
 package org.apache.aoo.cmisucp.unobojects;
 
 import com.sun.star.beans.Property;
@@ -22,6 +42,7 @@ import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.task.XInteractionHandler;
 import com.sun.star.ucb.ContentAction;
 import com.sun.star.ucb.ContentCreationException;
 import com.sun.star.ucb.ContentEvent;
@@ -278,6 +299,8 @@ public final class CMISContent extends ComponentBase
     }
 
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
+        XInteractionHandler xInteractionHandler = Environment.getInteractionHandler();     
+        
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
             XCommandInfo xRet = new CMISCommandInfo(m_xContext);
@@ -292,6 +315,8 @@ public final class CMISContent extends ComponentBase
         {            
             Property[] rProperties;
             rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);
+            for(Property p:rProperties)
+                log.info(p.Name);
             log.info("getPropertyValues()");            
             return getPropertyValues(rProperties);
         }
