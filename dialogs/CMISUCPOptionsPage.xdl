@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dlg:window PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "dialog.dtd">
+<dlg:window xmlns:dlg="http://openoffice.org/2000/dialog" xmlns:script="http://openoffice.org/2000/script" dlg:id="CMISUCPOptionsPage" dlg:left="190" dlg:top="44" dlg:width="348" dlg:height="225" dlg:closeable="true" dlg:moveable="true">
+ <dlg:styles>
+  <dlg:style dlg:style-id="0" dlg:border="0x0"/>
+ </dlg:styles>
+ <dlg:bulletinboard>
+  <dlg:text dlg:style-id="0" dlg:id="head" dlg:tab-index="0" dlg:left="10" dlg:top="2" dlg:width="328" dlg:height="10" dlg:value="User credentials for URL Schemes" dlg:align="center"/>
+  <dlg:menulist dlg:id="ListBox1" dlg:tab-index="1" dlg:left="14" dlg:top="41" dlg:width="175" dlg:height="171"/>
+  <dlg:menulist dlg:id="ListBox2" dlg:tab-index="2" dlg:left="192" dlg:top="41" dlg:width="90" dlg:height="171"/>
+  <dlg:text dlg:id="url" dlg:tab-index="6" dlg:left="63" dlg:top="29" dlg:width="87" dlg:height="10" dlg:value="URL Scheme" dlg:align="center"/>
+  <dlg:text dlg:id="user" dlg:tab-index="7" dlg:left="223" dlg:top="29" dlg:width="42" dlg:height="10" dlg:value="UserName" dlg:align="center"/>
+  <dlg:button dlg:id="edit" dlg:tab-index="3" dlg:left="294" dlg:top="53" dlg:width="48" dlg:height="16" dlg:value="EDIT"/>
+  <dlg:button dlg:id="delete" dlg:tab-index="4" dlg:left="294" dlg:top="77" dlg:width="48" dlg:height="16" dlg:value="DELETE"/>
+  <dlg:button dlg:id="add" dlg:tab-index="5" dlg:left="294" dlg:top="139" dlg:width="48" dlg:height="16" dlg:value="ADD NEW"/>
+ </dlg:bulletinboard>
+</dlg:window>

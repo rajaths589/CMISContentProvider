@@ -72,11 +72,12 @@ public class CMISRow implements com.sun.star.sdbc.XRow {
         String s = new String();
         try {
             s = ans.get(arg0);
+            if(s!=null)
+                return s;
         } catch (IndexOutOfBoundsException e) {
             throw new SQLException("Index out of bounds");
-        } finally {
-            return s;
-        }
+        } 
+        return new String();
     }
 
     public boolean getBoolean(int arg0) throws SQLException {

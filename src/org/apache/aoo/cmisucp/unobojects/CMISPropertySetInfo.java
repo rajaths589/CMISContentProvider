@@ -36,7 +36,7 @@ public final class CMISPropertySetInfo extends WeakBase
 {
     private final XComponentContext m_xContext;
     private static final String m_implementationName = CMISPropertySetInfo.class.getName();
-    private List<Property> available_properties;
+    private List<Property> available_properties = new ArrayList<Property>();
     
     public CMISPropertySetInfo( XComponentContext context )
     {
@@ -72,7 +72,15 @@ public final class CMISPropertySetInfo extends WeakBase
     // com.sun.star.beans.XPropertySetInfo:
     public com.sun.star.beans.Property[] getProperties()
     {
-        return (Property[]) available_properties.toArray();
+        final int size = available_properties.size();
+        Property arrayP[] = new Property[size];
+        int k = 0;
+        for(Property p:available_properties)
+        {
+           arrayP[k] = p;
+           k++;                    
+        }
+        return arrayP;
     }
 
     public com.sun.star.beans.Property getPropertyByName(String aName) throws com.sun.star.beans.UnknownPropertyException

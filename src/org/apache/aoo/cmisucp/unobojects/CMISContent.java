@@ -52,6 +52,7 @@ import com.sun.star.ucb.InsertCommandArgument;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
+import com.sun.star.ucb.PropertyValueState;
 import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
@@ -299,7 +300,7 @@ public final class CMISContent extends ComponentBase
     }
 
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
-        XInteractionHandler xInteractionHandler = Environment.getInteractionHandler();     
+        //XInteractionHandler xInteractionHandler = Environment.getInteractionHandler();     
         
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
@@ -315,6 +316,7 @@ public final class CMISContent extends ComponentBase
         {            
             Property[] rProperties;
             rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);
+            
             for(Property p:rProperties)
                 log.info(p.Name);
             log.info("getPropertyValues()");            
