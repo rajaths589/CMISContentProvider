@@ -335,8 +335,7 @@ public class CMISResourceManager {
         List<String> returnProperties = new ArrayList<String>();
         
         for(Property p:props)
-        {
-            log.info(p.Name);
+        {            
             if(p.Name.equalsIgnoreCase("ID"))
                 returnProperties.add(getID());
             else if(p.Name.equalsIgnoreCase("Title"))

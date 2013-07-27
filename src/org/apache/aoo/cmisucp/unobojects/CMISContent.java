@@ -315,11 +315,7 @@ public final class CMISContent extends ComponentBase
         else if (aCommand.Name.equalsIgnoreCase("getPropertyValues")) 
         {            
             Property[] rProperties;
-            rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);
-            
-            for(Property p:rProperties)
-                log.info(p.Name);
-            log.info("getPropertyValues()");            
+            rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);                        
             return getPropertyValues(rProperties);
         }
         else if (aCommand.Name.equalsIgnoreCase("setPropertyValues")) 
