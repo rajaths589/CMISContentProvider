@@ -121,7 +121,29 @@ public class CMISConnect {
                      
        return true;
     }
-            
+    private void decodeURI(String URI)        
+    {
+        if(URI.startsWith(cmisHTTP))
+        {
+            URI = URI.replaceFirst(cmisHTTP, "http");
+        }
+        else if(URI.startsWith(cmisHTTPS))
+        {
+            URI = URI.replaceFirst(cmisHTTPS, "https");
+        }
+        int prompt = URI.indexOf("://")+3;
+        int indexOfServerPath = URI.indexOf('/', prompt);
+        int indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
+        while(!connectToRepository(URI.substring(0, indexOfServerPath),URI.substring(indexOfServerPath+1, indexOfRepoID)))        
+        {
+            prompt = indexOfServerPath;
+            indexOfServerPath = URI.indexOf('/', prompt+1);
+            indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
+        }          
+        String localpath = URI.substring(indexOfRepoID);
+        connectToObject(localpath);
+    }
+    /*
     private void decodeURI(String URI)
     {
         if(URI.startsWith(cmisHTTP))
@@ -147,7 +169,7 @@ public class CMISConnect {
         }
         //support for object id
         
-    }
+    }*/
     private void connectToObject(String path)
     {        
         try

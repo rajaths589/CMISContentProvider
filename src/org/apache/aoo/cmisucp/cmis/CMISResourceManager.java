@@ -450,8 +450,8 @@ public class CMISResourceManager {
             }
             else if(transferResource.isFolder)
             {
-                createFolder(transferResource.getName());
-                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+transferResource.getName()), connected);
+                createFolder(newName);
+                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+newName), connected);
                 for(CmisObject child:transferResource.getFolder().getChildren())
                 {                                
                     newTransferFolder.transfer(child, connected,child.getName());                                        
@@ -469,7 +469,7 @@ public class CMISResourceManager {
         if(isDocument)
             getDocument().deleteAllVersions();
         if(isFolder)
-            getFolder().deleteTree(true, UnfileObject.UNFILE, false);            
+            getFolder().deleteTree(true, UnfileObject.DELETE, false);            
     }
 }
 
