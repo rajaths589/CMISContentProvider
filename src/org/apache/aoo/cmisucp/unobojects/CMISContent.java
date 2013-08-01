@@ -466,7 +466,22 @@ public final class CMISContent extends ComponentBase
             arg.Id = xContentid;            
             
             resourceManager.delete();
-            
+            ContentEvent arg1 = new ContentEvent();
+            arg1.Action = ContentAction.REMOVED;
+            arg1.Content = this;
+            arg1.Id = xContentid; 
+            if(getIdentifier().getContentProviderScheme().equals("cmis"))
+            {                
+                XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                xParent.contentListenerNotifier(arg1);
+            }
+            else if(getIdentifier().getContentProviderScheme().equals("cmiss"))
+            {
+                XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                xParent.contentListenerNotifier(arg1);
+            }
             contentListenerNotifier(arg);
         }        
         return com.sun.star.uno.Any.VOID;
@@ -509,8 +524,20 @@ public final class CMISContent extends ComponentBase
                 arg.Content = this;
                 arg.Id = xContentid;
                 cmisContent  = FileUtils.createFolder(parentFolder, path.substring(6,path.lastIndexOf("/")+1), "cmis:folder");
-                resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);
-                contentListenerNotifier(arg);
+                resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);               
+                if(getIdentifier().getContentProviderScheme().equals("cmis"))
+                {
+                    XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                    CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                    xParent.contentListenerNotifier(arg);
+                }
+                else if(getIdentifier().getContentProviderScheme().equals("cmiss"))
+                {
+                    XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                    CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                    xParent.contentListenerNotifier(arg);
+                }
+                //contentListenerNotifier(arg);
                 // Content Event to be added.
                 return null;
             }
@@ -659,9 +686,11 @@ private XRow getPropertyValues(Property[] request)
         Any ans[] = new Any[pValues.length];
         CMISPropertySetInfo xCommandInfo = new CMISPropertySetInfo(m_xContext);
         int index = 0;
+        ContentEvent conEV = new ContentEvent();
+        conEV.Action = ContentAction.EXCHANGED;
+        conEV.Content = this;
+        conEV.Id = getIdentifier();
         
-        
-
         for(PropertyValue p:pValues)
         {
             if(CMISConstants.propertiesHashMap.containsKey(p.Name))
@@ -691,6 +720,7 @@ private XRow getPropertyValues(Property[] request)
                             event.NewValue = title;
                             notifyPropertyListeners(event);
                             ans[index] = null;
+                            contentListenerNotifier(conEV);
                         }
                         catch(CmisNameConstraintViolationException e)
                         {
@@ -723,6 +753,7 @@ private XRow getPropertyValues(Property[] request)
                             ans[index] = null;
                             nameSet = true;
                             notifyPropertyListeners(event);
+                            contentListenerNotifier(conEV);
                         }
                     }
                 }   
