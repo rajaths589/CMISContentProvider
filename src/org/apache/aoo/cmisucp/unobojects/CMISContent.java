@@ -32,6 +32,7 @@ import com.sun.star.io.IOException;
 import com.sun.star.io.NotConnectedException;
 import com.sun.star.io.XActiveDataSink;
 import com.sun.star.io.XActiveDataStreamer;
+import com.sun.star.io.XDataOutputStream;
 import com.sun.star.io.XInputStream;
 import com.sun.star.io.XOutputStream;
 import com.sun.star.io.XStream;
@@ -52,6 +53,7 @@ import com.sun.star.ucb.InsertCommandArgument;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
+import com.sun.star.ucb.PropertyValueState;
 import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandInfo;
@@ -73,6 +75,8 @@ import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
 import org.apache.aoo.cmisucp.cmis.CMISConnect;
 import org.apache.aoo.cmisucp.cmis.CMISResourceManager;
+import org.apache.aoo.cmisucp.helper.ContentPropertySet;
+import org.apache.aoo.cmisucp.helper.PropertyAndValueSet;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.ObjectType;
@@ -166,10 +170,11 @@ public final class CMISContent extends ComponentBase
 
         try
         {
-            aConnect = new CMISConnect(m_xContext,"http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
+            //aConnect = new CMISConnect(m_xContext,"http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
+            aConnect = new CMISConnect(m_xContext, xContentid.getContentIdentifier(), "rajaths589", "*****");
             connected_session = aConnect.getSession();
             cmisContent = aConnect.getObject();
-            resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);
+            resourceManager = new CMISResourceManager(m_xContext, aConnect);
             
         }
         catch(CmisBaseException e)
@@ -299,7 +304,7 @@ public final class CMISContent extends ComponentBase
     }
 
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
-        XInteractionHandler xInteractionHandler = Environment.getInteractionHandler();     
+        //XInteractionHandler xInteractionHandler = Environment.getInteractionHandler();     
         
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
@@ -314,10 +319,7 @@ public final class CMISContent extends ComponentBase
         else if (aCommand.Name.equalsIgnoreCase("getPropertyValues")) 
         {            
             Property[] rProperties;
-            rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);
-            for(Property p:rProperties)
-                log.info(p.Name);
-            log.info("getPropertyValues()");            
+            rProperties = (Property[]) AnyConverter.toArray(aCommand.Argument);                        
             return getPropertyValues(rProperties);
         }
         else if (aCommand.Name.equalsIgnoreCase("setPropertyValues")) 
@@ -330,8 +332,7 @@ public final class CMISContent extends ComponentBase
             }                
             log.info("setPropertyValues()");
             return setPropertyValues(pValues);
-        }
-        else if (aCommand.Name.equalsIgnoreCase("Open")) 
+        }else if (aCommand.Name.equalsIgnoreCase("Open")) 
         {
             log.info("open()");
 
@@ -343,10 +344,9 @@ public final class CMISContent extends ComponentBase
             }
             
             if (isFolder()) {
-                if ((openArg.Mode == OpenMode.ALL) || (openArg.Mode == OpenMode.DOCUMENTS) || (openArg.Mode == OpenMode.FOLDERS)) {
-                    XDynamicResultSet xRet;
-                    xRet = openFolder(openArg);
-                    return xRet;
+                if ((openArg.Mode == OpenMode.ALL) || (openArg.Mode == OpenMode.DOCUMENTS) || (openArg.Mode == OpenMode.FOLDERS)) {                    
+                    return openFolder(openArg);
+                    
                 }
                 else
                 {
@@ -365,16 +365,16 @@ public final class CMISContent extends ComponentBase
                     {
                         XActiveDataStreamer xDataStream = UnoRuntime.queryInterface(XActiveDataStreamer.class, openArg.Sink);                                
                         if(xDataStream!=null)
-                        {
+                        {                                                         
                             XStream xStream = new XStream() {                                
                                 public XInputStream getInputStream() {
                                     return xInp;
                                 }
 
                                 public XOutputStream getOutputStream() {
-                                    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.                                    
+                                    return null;
                                 }
-                            };
+                            };                            
                             xDataStream.setStream(xStream);
                         }
                         else
@@ -446,9 +446,9 @@ public final class CMISContent extends ComponentBase
             try 
             {
                 if(aTransInfo.NewTitle!=null)
-                    resourceManager.transfer(transferConnect.getObject(), transferConnect.getSession(), aTransInfo.NewTitle);
+                    resourceManager.transfer(transferConnect, aTransInfo.NewTitle);
                 else
-                    resourceManager.transfer(transferConnect.getObject(), transferConnect.getSession(), transferConnect.getObject().getName());
+                    resourceManager.transfer(transferConnect,transferConnect.getObject().getName());
             }    
             catch (java.io.IOException ex) 
             {
@@ -468,7 +468,22 @@ public final class CMISContent extends ComponentBase
             arg.Id = xContentid;            
             
             resourceManager.delete();
-            
+            ContentEvent arg1 = new ContentEvent();
+            arg1.Action = ContentAction.REMOVED;
+            arg1.Content = this;
+            arg1.Id = xContentid; 
+            if(getIdentifier().getContentProviderScheme().equals("cmis"))
+            {                
+                XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                xParent.contentListenerNotifier(arg1);
+            }
+            else if(getIdentifier().getContentProviderScheme().equals("cmiss"))
+            {
+                XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                xParent.contentListenerNotifier(arg1);
+            }
             contentListenerNotifier(arg);
         }        
         return com.sun.star.uno.Any.VOID;
@@ -511,8 +526,20 @@ public final class CMISContent extends ComponentBase
                 arg.Content = this;
                 arg.Id = xContentid;
                 cmisContent  = FileUtils.createFolder(parentFolder, path.substring(6,path.lastIndexOf("/")+1), "cmis:folder");
-                resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);
-                contentListenerNotifier(arg);
+                resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);               
+                if(getIdentifier().getContentProviderScheme().equals("cmis"))
+                {
+                    XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                    CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                    xParent.contentListenerNotifier(arg);
+                }
+                else if(getIdentifier().getContentProviderScheme().equals("cmiss"))
+                {
+                    XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
+                    CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                    xParent.contentListenerNotifier(arg);
+                }
+                //contentListenerNotifier(arg);
                 // Content Event to be added.
                 return null;
             }
@@ -570,9 +597,8 @@ public final class CMISContent extends ComponentBase
         return null;
     }
     //My method
-    private XDynamicResultSet openFolder(OpenCommandArgument2 oarg) {
-        List<XRow> open_result = new ArrayList<XRow>();
-        
+    private Any openFolder(OpenCommandArgument2 oarg) {
+        List<PropertyAndValueSet> open_result = new ArrayList<PropertyAndValueSet>();       
         if(!exists)
             return null;
         
@@ -581,34 +607,26 @@ public final class CMISContent extends ComponentBase
         if (oarg.Mode == OpenMode.ALL) 
         {
             for (CmisObject o : f.getChildren()) 
-            {       
-                
-                List<String> childProps;
-                childProps = new ArrayList<String>();
-
-                childProps.add(o.getId());
-                
+            {                                                       
                 CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
                 
-                childProps.addAll(tempChildResource.getProperties(oarg.Properties));
-                XRow xRow = new CMISRow(childProps);
-                open_result.add(xRow);
+                Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
+                PropertyAndValueSet childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
+                childValue.updateProperties(oarg.Properties, values);
+                open_result.add(childValue);
             }
         } 
         else if (oarg.Mode == OpenMode.DOCUMENTS) 
         {
             opCon.setFilterString("cmis:document");
             for (CmisObject o : f.getChildren(opCon)) 
-            {
-                List<String> childProps;
-                childProps = new ArrayList<String>();
-
-                childProps.add(o.getId());
+            {                
                 CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
                 
-                childProps.addAll(tempChildResource.getProperties(oarg.Properties));
-                XRow xRow = new CMISRow(childProps);
-                open_result.add(xRow);
+                Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
+                PropertyAndValueSet childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
+                childValue.updateProperties(oarg.Properties, values);
+                open_result.add(childValue);
             }
         } 
         else 
@@ -616,43 +634,34 @@ public final class CMISContent extends ComponentBase
             opCon.setFilterString("cmis:folder");
             for (CmisObject o : f.getChildren(opCon)) 
             {
-                List<String> childProps;
-                childProps = new ArrayList<String>();
-
-                childProps.add(o.getId());
                 CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
                 
-                childProps.addAll(tempChildResource.getProperties(oarg.Properties));
-            
-            XRow xRow = new CMISRow(childProps);
-            open_result.add(xRow);
+                Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
+                PropertyAndValueSet childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
+                childValue.updateProperties(oarg.Properties, values);
+                open_result.add(childValue);
         }
     }
-    XDynamicResultSet xDynamicResultSet = new CMISDynamicResultSet(m_xContext,open_result,oarg.Properties,xContentid);
-    return xDynamicResultSet;
+    ContentPropertySet cpSet = new ContentPropertySet(m_xContext, open_result.toArray(new PropertyAndValueSet[0]));
+    return new Any(new Type(ContentPropertySet.class),cpSet);
 }
 //My method
-private XRow getPropertyValues(Property[] request)
+private Any getPropertyValues(Property[] request)
     {
         if(!exists)
             return null;
-        
-        List<String> answers = new ArrayList<String>();
-        
-        answers.add(cmisContent.getId());
+        //switching to PropertyAndValueSet
         
         if(request == null)
         {
             CMISPropertySetInfo propSetInfo = new CMISPropertySetInfo(m_xContext);
             request = propSetInfo.getProperties();
         }        
-        answers.addAll(resourceManager.getProperties(request));
         
-        XRow xRet;
-        xRet = new CMISRow(answers);
-        
-        return xRet;
-        
+        Any value[] = resourceManager.getPropertiesAsAny(request);                                        
+        PropertyAndValueSet propertiesSet = new PropertyAndValueSet(xContentid.getContentIdentifier());
+        propertiesSet.updateProperties(request, value);
+        return new Any(new Type(XRow.class),propertiesSet);
     }            
     
     //My method
@@ -661,9 +670,11 @@ private XRow getPropertyValues(Property[] request)
         Any ans[] = new Any[pValues.length];
         CMISPropertySetInfo xCommandInfo = new CMISPropertySetInfo(m_xContext);
         int index = 0;
+        ContentEvent conEV = new ContentEvent();
+        conEV.Action = ContentAction.EXCHANGED;
+        conEV.Content = this;
+        conEV.Id = getIdentifier();
         
-        
-
         for(PropertyValue p:pValues)
         {
             if(CMISConstants.propertiesHashMap.containsKey(p.Name))
@@ -693,6 +704,7 @@ private XRow getPropertyValues(Property[] request)
                             event.NewValue = title;
                             notifyPropertyListeners(event);
                             ans[index] = null;
+                            contentListenerNotifier(conEV);
                         }
                         catch(CmisNameConstraintViolationException e)
                         {
@@ -725,6 +737,7 @@ private XRow getPropertyValues(Property[] request)
                             ans[index] = null;
                             nameSet = true;
                             notifyPropertyListeners(event);
+                            contentListenerNotifier(conEV);
                         }
                     }
                 }   

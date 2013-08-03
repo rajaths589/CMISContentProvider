@@ -36,7 +36,7 @@ public final class CMISPropertySetInfo extends WeakBase
 {
     private final XComponentContext m_xContext;
     private static final String m_implementationName = CMISPropertySetInfo.class.getName();
-    private List<Property> available_properties;
+    private List<Property> available_properties = new ArrayList<Property>();
     
     public CMISPropertySetInfo( XComponentContext context )
     {
@@ -66,13 +66,32 @@ public final class CMISPropertySetInfo extends WeakBase
         available_properties.add(new Property("ID", -1, Type.STRING, PropertyAttribute.READONLY));
         available_properties.add(new Property("CreatedBy", -1, Type.STRING, PropertyAttribute.READONLY));
         available_properties.add(new Property("ModifiedBy", -1, Type.STRING, PropertyAttribute.READONLY));
-        available_properties.add(new Property("CheckinComment", -1,Type.STRING,PropertyAttribute.READONLY));        
+        available_properties.add(new Property("CheckinComment", -1,Type.STRING,PropertyAttribute.READONLY)); 
+        available_properties.add(new Property("IsFloppy",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsRemoveable",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsRemote",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsVolume",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsHidden",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsComapctDisk",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsRemote",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("TargetURL",-1,Type.STRING,PropertyAttribute.READONLY));
+        available_properties.add(new Property("BaseURI",-1,Type.STRING,PropertyAttribute.READONLY));
+        available_properties.add(new Property("IsReadOnly",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("CasePreservingURL",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
     }            
     
     // com.sun.star.beans.XPropertySetInfo:
     public com.sun.star.beans.Property[] getProperties()
     {
-        return (Property[]) available_properties.toArray();
+        final int size = available_properties.size();
+        Property arrayP[] = new Property[size];
+        int k = 0;
+        for(Property p:available_properties)
+        {
+           arrayP[k] = p;
+           k++;                    
+        }
+        return arrayP;
     }
 
     public com.sun.star.beans.Property getPropertyByName(String aName) throws com.sun.star.beans.UnknownPropertyException

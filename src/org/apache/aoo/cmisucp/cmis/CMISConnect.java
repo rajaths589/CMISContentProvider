@@ -38,10 +38,15 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
  */
 public class CMISConnect {
     
-    public String server_url;
-    public String username;
+    private String server_url;
+    private String username;
     private String password;
-    public String repositoryID;
+    private String repositoryID;
+    private String nameObj;
+    private String parentURL;
+    private String parentName;
+    private String repositoryURL;
+    private String url;
     
     private Session connected_session;
     private Folder root;
@@ -81,11 +86,17 @@ public class CMISConnect {
         
     }
     
+    public CMISConnect(XComponentContext xContext, CmisObject ob, Session s)
+    {
+        content = ob;
+        connected_session = s;
+    }
     public CMISConnect(XComponentContext xComponentContext, String uri, String user, String pwd )
     {
         m_Context = xComponentContext;
         username = user;
         password = pwd;
+        url = uri;
         decodeURI(uri);
         contentType = content.getBaseTypeId().value();
     }
@@ -121,14 +132,24 @@ public class CMISConnect {
                      
        return true;
     }
-            
-    private void decodeURI(String URI)
+    
+    public String getURL()
     {
+        return url;
+    }
+    private void decodeURI(String URI)        
+    {
+        
         if(URI.startsWith(cmisHTTP))
+        {
+            repositoryURL = "cmis://";
             URI = URI.replaceFirst(cmisHTTP, "http");
+        }
         else if(URI.startsWith(cmisHTTPS))
+        {
+            repositoryURL = "cmiss://";
             URI = URI.replaceFirst(cmisHTTPS, "https");
-                    
+        }
         int prompt = URI.indexOf("://")+3;
         int indexOfServerPath = URI.indexOf('/', prompt);
         int indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
@@ -137,17 +158,20 @@ public class CMISConnect {
             prompt = indexOfServerPath;
             indexOfServerPath = URI.indexOf('/', prompt+1);
             indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
-        }        
-        if(URI.startsWith("path", indexOfRepoID+1))
+        }          
+        String localpath = URI.substring(indexOfRepoID);
+        repositoryURL = URI.substring(0,indexOfRepoID);
+        repositoryURL = repositoryURL.replaceFirst("http", "cmis");
+        int lastSlash = localpath.lastIndexOf('/');
+        nameObj = URI.substring(lastSlash+1);
+        parentURL = URI.substring(0, lastSlash);
+        parentURL = parentURL.replaceFirst("http", "cmis");
+        if(parentURL.equals(repositoryURL))
         {
-            String localpath = URI.substring(URI.indexOf('=')+1);
-            // support for multiple parameters
-            // for versioning
-            connectToObject(localpath);
+            parentURL = parentURL+"/";
         }
-        //support for object id
-        
-    }
+        connectToObject(localpath);
+    }    
     private void connectToObject(String path)
     {        
         try
@@ -157,8 +181,8 @@ public class CMISConnect {
         }
         catch(CmisBaseException ex)
         {
-                    content = null;
-                    contentType = null;
+            content = null;
+            contentType = null;
         }
     }
     private void connectToID(String id)
@@ -187,5 +211,15 @@ public class CMISConnect {
     public String getContentType()
     {
         return contentType;
+    }
+    
+    public String getParentURL()
+    {
+        return parentURL;
+    }
+    
+    public String getRepositoryURL()
+    {
+        return repositoryURL;
     }
 }

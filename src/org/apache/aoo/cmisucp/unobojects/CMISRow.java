@@ -72,11 +72,12 @@ public class CMISRow implements com.sun.star.sdbc.XRow {
         String s = new String();
         try {
             s = ans.get(arg0);
+            if(s!=null)
+                return s;
         } catch (IndexOutOfBoundsException e) {
             throw new SQLException("Index out of bounds");
-        } finally {
-            return s;
-        }
+        } 
+        return new String();
     }
 
     public boolean getBoolean(int arg0) throws SQLException {
@@ -218,7 +219,7 @@ public class CMISRow implements com.sun.star.sdbc.XRow {
     }
 
     public Object getObject(int arg0, XNameAccess arg1) throws SQLException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.               
     }
 
     public XRef getRef(int arg0) throws SQLException {

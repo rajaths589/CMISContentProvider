@@ -291,7 +291,7 @@ public final class CMISContentResultSet extends PropertySet
 
     public boolean isAfterLast() throws com.sun.star.sdbc.SQLException
     {
-        if(m_RowCount>values.size())
+        if(m_RowCount>=values.size())
             return true;
         else
             return false;
@@ -504,7 +504,7 @@ public final class CMISContentResultSet extends PropertySet
     public boolean previous() throws com.sun.star.sdbc.SQLException
     {
         try {
-            registerEvent(m_RowCount, m_RowCount-1);
+            registerEvent(m_RowCount, m_RowCount);
         } catch (IllegalArgumentException ex) {
             Logger.getLogger(CMISContentResultSet.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -573,102 +573,106 @@ public final class CMISContentResultSet extends PropertySet
     // com.sun.star.sdbc.XRow:
     public boolean wasNull() throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).wasNull();
+        return values.get(m_RowCount).wasNull();
     }
 
     public String getString(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getString(columnIndex);
+        String s = values.get(m_RowCount).getString(columnIndex);
+        if(s!=null)
+            return s;
+        else
+            return new String();
     }
 
     public boolean getBoolean(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getBoolean(columnIndex);
+        return values.get(m_RowCount).getBoolean(columnIndex);
     }
 
     public byte getByte(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getByte(columnIndex);
+        return values.get(m_RowCount).getByte(columnIndex);
     }
 
     public short getShort(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getShort(columnIndex);
+        return values.get(m_RowCount).getShort(columnIndex);
     }
 
     public int getInt(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getInt(columnIndex);
+        return values.get(m_RowCount).getInt(columnIndex);
     }
 
     public long getLong(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getLong(columnIndex);
+        return values.get(m_RowCount).getLong(columnIndex);
     }
 
     public float getFloat(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getFloat(columnIndex);
+        return values.get(m_RowCount).getFloat(columnIndex);
     }
 
     public double getDouble(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getDouble(columnIndex);
+        return values.get(m_RowCount).getDouble(columnIndex);
     }
 
     public byte[] getBytes(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getBytes(columnIndex);
+        return values.get(m_RowCount).getBytes(columnIndex);
     }
 
     public com.sun.star.util.Date getDate(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getDate(columnIndex);
+        return values.get(m_RowCount).getDate(columnIndex);
     }
 
     public com.sun.star.util.Time getTime(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getTime(columnIndex);
+        return values.get(m_RowCount).getTime(columnIndex);
     }
 
     public com.sun.star.util.DateTime getTimestamp(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getTimestamp(columnIndex);
+        return values.get(m_RowCount).getTimestamp(columnIndex);
     }
 
     public com.sun.star.io.XInputStream getBinaryStream(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getBinaryStream(columnIndex);
+        return values.get(m_RowCount).getBinaryStream(columnIndex);
     }
 
     public com.sun.star.io.XInputStream getCharacterStream(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getCharacterStream(columnIndex);
+        return values.get(m_RowCount).getCharacterStream(columnIndex);
     }
 
     public Object getObject(int columnIndex, com.sun.star.container.XNameAccess typeMap) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getObject(columnIndex, typeMap);
+        return values.get(m_RowCount).getObject(columnIndex, typeMap);
     }
 
     public com.sun.star.sdbc.XRef getRef(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getRef(columnIndex);
+        return values.get(m_RowCount).getRef(columnIndex);
     }
 
     public com.sun.star.sdbc.XBlob getBlob(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getBlob(columnIndex);
+        return values.get(m_RowCount).getBlob(columnIndex);
     }
 
     public com.sun.star.sdbc.XClob getClob(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getClob(columnIndex);
+        return values.get(m_RowCount).getClob(columnIndex);
     }
 
     public com.sun.star.sdbc.XArray getArray(int columnIndex) throws com.sun.star.sdbc.SQLException
     {
-        return values.get(m_RowCount-1).getArray(columnIndex);
+        return values.get(m_RowCount).getArray(columnIndex);
     }
 
     // com.sun.star.sdbc.XColumnLocate:

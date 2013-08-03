@@ -22,10 +22,14 @@ package org.apache.aoo.cmisucp.cmis;
 
 import com.sun.star.beans.Property;
 import com.sun.star.io.XInputStream;
+import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
+import com.sun.star.uno.Any;
+import com.sun.star.uno.Type;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.util.Date;
+import com.sun.star.util.DateTime;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -33,6 +37,7 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.unobojects.CMISInputStream;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -63,15 +68,25 @@ public class CMISResourceManager {
     private Document documentObject;
     public boolean isFolder;
     public boolean isDocument;
-    private static final Logger log = Logger.getLogger(CMISResourceManager.class.getName());
+    private static final Logger log = Logger.getLogger(CMISResourceManager.class.getName()); 
+    private String url;
+    private CMISConnect m_Connect;
     
-    public CMISResourceManager(XComponentContext xContext, CmisObject ob, Session s)
+    public CMISResourceManager(XComponentContext xContext, CMISConnect connect )
     {        
-        object = ob;
-        connected = s;
+        object = connect.getObject();
+        connected = connect.getSession();        
         generateFolderorDocument();    
+        m_Connect = connect;
     }
     
+    public CMISResourceManager(XComponentContext xContext, CmisObject obj, Session s)
+    {
+        object = obj;
+        connected = s;
+        generateFolderorDocument();
+        m_Connect = null;
+    }
     private void generateFolderorDocument()
     {
         if(isFolder())
@@ -179,8 +194,76 @@ public class CMISResourceManager {
         {
             return null;
         }
+        catch(CmisBaseException ex)
+        {
+            
+            log.log(Level.INFO, "cmis exception:{0}", ex.getExceptionName());
+            return null;
+        }
     }
     
+    public Any getPropertyAsAny(String PropertyID)
+    {
+        if (PropertyID.equalsIgnoreCase("ID")) {
+            return new Any(Type.STRING,getID());
+        } else if (PropertyID.equalsIgnoreCase("Title")) {
+            return new Any(Type.STRING,getName());
+        } else if (PropertyID.equalsIgnoreCase("IsFolder")) {
+            return new Any(Type.BOOLEAN,isFolder);
+        } else if (PropertyID.equalsIgnoreCase("IsDocument")) {
+            return new Any(Type.BOOLEAN,(isDocument));
+        } else if (PropertyID.equalsIgnoreCase("DateCreated")) {
+           return new Any(Type.VOID,getCreationDate());            
+        } else if (PropertyID.equalsIgnoreCase("DateModified")) {
+            return new Any(Type.VOID,getLastModifiedDate());            
+        } else if (PropertyID.equalsIgnoreCase("MediaType")) {
+            return new Any(Type.STRING,getMimeType());
+        } else if (PropertyID.equalsIgnoreCase("ContentType")) {
+            return new Any(Type.STRING,getContentType());
+        } else if (PropertyID.equalsIgnoreCase("CreatedBy")) {
+            return new Any(Type.STRING,getCreatedBy());
+        } else if (PropertyID.equalsIgnoreCase("ModifiedBy")) {
+            return new Any(Type.STRING,getLastModifiedBy());
+        } else if (PropertyID.equalsIgnoreCase("CheckinComment")) {
+            return new Any(Type.STRING,getCheckinComment());
+        } else if (PropertyID.equalsIgnoreCase("Size")) {
+            return new Any(Type.HYPER,getSize());
+        } else if(PropertyID.equalsIgnoreCase("IsRemote")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("IsFloppy")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("IsCompactDisc")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("IsHidden")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("IsVolume")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("IsRemoveable")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("IsReadOnly")){
+            return new Any(Type.BOOLEAN,false);
+        } else if(PropertyID.equalsIgnoreCase("CasePreservingURL")){
+            return new Any(Type.BOOLEAN,true);
+        }else if(PropertyID.equalsIgnoreCase("TargetURL")){
+            return new Any(Type.STRING,"");
+        } else if(PropertyID.equalsIgnoreCase("BaseURI")){
+            return new Any(Type.STRING,m_Connect.getParentURL());
+        }else {
+            return null;
+        }
+    }
+    
+    public Any[] getPropertiesAsAny(Property[] props)
+    {
+       Any ret[] = new Any[props.length];
+       int index = 0;
+       for(Property p:props)
+       {
+           ret[index] = getPropertyAsAny(p.Name);
+           index++;
+       }
+       return ret;
+    }
     public String getName()
     {
         return object.getName();
@@ -238,15 +321,18 @@ public class CMISResourceManager {
             return null;
     }
     
-    public Date getCreationDate()
+    public DateTime getCreationDate()
     {
         GregorianCalendar cal = object.getCreationDate();
-        Date creationDate = new Date();
+        DateTime creationDate = new DateTime();
         
         creationDate.Day = (short) cal.get(Calendar.DAY_OF_MONTH);
         creationDate.Month = (short) cal.get(Calendar.MONTH);
         creationDate.Year = (short) cal.get(Calendar.YEAR);
-        
+        creationDate.Hours = (short) cal.get(Calendar.HOUR_OF_DAY);
+        creationDate.Minutes = (short) cal.get(Calendar.MINUTE);
+        creationDate.Seconds = (short) cal.get(Calendar.SECOND);
+        creationDate.HundredthSeconds = (short) cal.get(Calendar.MILLISECOND);
         return creationDate;
     }
     
@@ -268,25 +354,28 @@ public class CMISResourceManager {
             return null;
     }
     
-    public Date getLastModifiedDate()
+    public DateTime getLastModifiedDate()
     {
         GregorianCalendar cal = object.getLastModificationDate();
-        Date modifiedDate = new Date();
+        DateTime creationDate = new DateTime();
         
-        modifiedDate.Day = (short) cal.get(Calendar.DAY_OF_MONTH);
-        modifiedDate.Month = (short) cal.get(Calendar.MONTH);
-        modifiedDate.Year = (short) cal.get(Calendar.YEAR);
-        
-        return modifiedDate;
+        creationDate.Day = (short) cal.get(Calendar.DAY_OF_MONTH);
+        creationDate.Month = (short) cal.get(Calendar.MONTH);
+        creationDate.Year = (short) cal.get(Calendar.YEAR);
+        creationDate.Hours = (short) cal.get(Calendar.HOUR_OF_DAY);
+        creationDate.Minutes = (short) cal.get(Calendar.MINUTE);
+        creationDate.Seconds = (short) cal.get(Calendar.SECOND);
+        creationDate.HundredthSeconds = (short) cal.get(Calendar.MILLISECOND);
+        return creationDate;
     }
     
     public XInputStream getInputStream()
     {
         if(isDocument)
         {
-            //com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter xInputStream;
-            //xInputStream = new InputStreamToXInputStreamAdapter(getDocument().getContentStream().getStream());
-            XInputStream xInputStream = new CMISInputStream(m_Context, getDocument());
+            com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter xInputStream;
+            xInputStream = new InputStreamToXInputStreamAdapter(getDocument().getContentStream().getStream());
+            //XInputStream xInputStream = new CMISInputStream(m_Context, getDocument());
             return xInputStream;
         }
         else
@@ -335,8 +424,7 @@ public class CMISResourceManager {
         List<String> returnProperties = new ArrayList<String>();
         
         for(Property p:props)
-        {
-            log.info(p.Name);
+        {            
             if(p.Name.equalsIgnoreCase("ID"))
                 returnProperties.add(getID());
             else if(p.Name.equalsIgnoreCase("Title"))
@@ -437,25 +525,27 @@ public class CMISResourceManager {
     }
         
     
-    public void transfer(CmisObject transferObject, Session transferSession, String newName ) throws IOException, InteractiveBadTransferURLException
+    //public void transfer(CmisObject transferObject, Session transferSession, String newName ) throws IOException, InteractiveBadTransferURLException
+    public void transfer(CMISConnect connect, String newName ) throws IOException, InteractiveBadTransferURLException
     {
         if(isDocument)
             return;
         try
         {            
         
-            CMISResourceManager transferResource = new CMISResourceManager(m_Context, transferObject, transferSession);
+            CMISResourceManager transferResource = new CMISResourceManager(m_Context, connect);
             if(transferResource.isDocument)
             {
                 createDocument(transferResource.getInputStream(), newName, transferResource.getMimeType());                            
             }
             else if(transferResource.isFolder)
             {
-                createFolder(transferResource.getName());
-                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+transferResource.getName()), connected);
+                createFolder(newName);
+                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+newName), connected);
                 for(CmisObject child:transferResource.getFolder().getChildren())
-                {                                
-                    newTransferFolder.transfer(child, connected,child.getName());                                        
+                {                 
+                    CMISConnect childConnect = new CMISConnect(m_Context, child, connected);
+                    newTransferFolder.transfer(childConnect,child.getName());                                        
                 }            
             }
         }
@@ -470,7 +560,7 @@ public class CMISResourceManager {
         if(isDocument)
             getDocument().deleteAllVersions();
         if(isFolder)
-            getFolder().deleteTree(true, UnfileObject.UNFILE, false);            
+            getFolder().deleteTree(true, UnfileObject.DELETE, false);            
     }
 }
 
