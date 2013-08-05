@@ -169,8 +169,7 @@ public final class CMISContent extends ComponentBase
         CMISConnect aConnect;
 
         try
-        {
-            //aConnect = new CMISConnect(m_xContext,"http://localhost:8080/inmemory/atom", "rajaths589", "*****", "A1", uri);
+        {            
             aConnect = new CMISConnect(m_xContext, xContentid.getContentIdentifier(), "rajaths589", "*****");
             connected_session = aConnect.getSession();
             cmisContent = aConnect.getObject();
@@ -198,8 +197,7 @@ public final class CMISContent extends ComponentBase
         }
         exists = true;
         setContentType();
-        
-        
+        // cache propertiess        
     }
 
     private void setContentType()

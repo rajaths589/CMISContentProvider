@@ -121,6 +121,7 @@ public final class CMISContentProvider extends WeakBase
     // com.sun.star.ucb.XContentProvider:
     public com.sun.star.ucb.XContent queryContent(com.sun.star.ucb.XContentIdentifier Identifier) throws com.sun.star.ucb.IllegalIdentifierException
     {
+
         if(!isLegalIdentifier(Identifier))
             throw new IllegalIdentifierException(Identifier.getContentIdentifier()+" is illegal");
         

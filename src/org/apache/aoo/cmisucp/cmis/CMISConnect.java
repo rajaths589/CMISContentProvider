@@ -150,7 +150,7 @@ public class CMISConnect {
             repositoryURL = "cmiss://";
             URI = URI.replaceFirst(cmisHTTPS, "https");
         }
-        int prompt = URI.indexOf("://")+3;
+        int prompt = URI.indexOf("://")+3;      
         int indexOfServerPath = URI.indexOf('/', prompt);
         int indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
         while(!connectToRepository(URI.substring(0, indexOfServerPath),URI.substring(indexOfServerPath+1, indexOfRepoID)))        
@@ -162,7 +162,7 @@ public class CMISConnect {
         String localpath = URI.substring(indexOfRepoID);
         repositoryURL = URI.substring(0,indexOfRepoID);
         repositoryURL = repositoryURL.replaceFirst("http", "cmis");
-        int lastSlash = localpath.lastIndexOf('/');
+        int lastSlash = URI.lastIndexOf('/');
         nameObj = URI.substring(lastSlash+1);
         parentURL = URI.substring(0, lastSlash);
         parentURL = parentURL.replaceFirst("http", "cmis");
@@ -171,6 +171,7 @@ public class CMISConnect {
             parentURL = parentURL+"/";
         }
         connectToObject(localpath);
+        
     }    
     private void connectToObject(String path)
     {        
