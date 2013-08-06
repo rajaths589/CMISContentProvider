@@ -626,7 +626,11 @@ public final class CMISContent extends ComponentBase
                 CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
                 
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
-                PropertyAndValueSet childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
+                PropertyAndValueSet childValue;
+                if(xContentid.getContentIdentifier().endsWith("/"))                    
+                    childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+tempChildResource.getName());
+                else
+                    childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
                 childValue.updateProperties(oarg.Properties, values);
                 open_result.add(childValue);
             }
@@ -639,7 +643,12 @@ public final class CMISContent extends ComponentBase
                 CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
                 
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
-                PropertyAndValueSet childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
+                PropertyAndValueSet childValue;
+                if(xContentid.getContentIdentifier().endsWith("/"))                    
+                    childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+tempChildResource.getName());
+                else
+                    childValue = new PropertyAndValueSet(xContentid.getContentIdentifier()+"/"+tempChildResource.getName());
+                childValue.updateProperties(oarg.Properties, values);
                 childValue.updateProperties(oarg.Properties, values);
                 open_result.add(childValue);
         }
