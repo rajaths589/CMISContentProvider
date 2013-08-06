@@ -138,18 +138,26 @@ public class CMISConnect {
         return url;
     }
     private void decodeURI(String URI)        
-    {
-        
+    {        
         if(URI.startsWith(cmisHTTP))
         {
             repositoryURL = "cmis://";
             URI = URI.replaceFirst(cmisHTTP, "http");
+            String tempURL = URI.substring(7);
+            tempURL = tempURL.replaceAll("//", "/");
+            URI = "http://" + tempURL;        
         }
         else if(URI.startsWith(cmisHTTPS))
         {
             repositoryURL = "cmiss://";
             URI = URI.replaceFirst(cmisHTTPS, "https");
-        }
+            String tempURL = URI.substring(8);
+            tempURL = tempURL.replaceAll("//", "/");
+            URI = "http://" + tempURL;        
+        }               
+        if(URI.endsWith("/"))
+            URI = URI.substring(0,URI.length()-1);
+        
         int prompt = URI.indexOf("://")+3;      
         int indexOfServerPath = URI.indexOf('/', prompt);
         int indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
@@ -158,6 +166,11 @@ public class CMISConnect {
             prompt = indexOfServerPath;
             indexOfServerPath = URI.indexOf('/', prompt+1);
             indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
+            if(indexOfRepoID<0)
+            {    
+                URI = URI+"/";
+                indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
+            }
         }          
         String localpath = URI.substring(indexOfRepoID);
         repositoryURL = URI.substring(0,indexOfRepoID);
@@ -166,10 +179,10 @@ public class CMISConnect {
         nameObj = URI.substring(lastSlash+1);
         parentURL = URI.substring(0, lastSlash);
         parentURL = parentURL.replaceFirst("http", "cmis");
-        if(parentURL.equals(repositoryURL))
+       /* if(parentURL.equals(repositoryURL))
         {
             parentURL = parentURL+"/";
-        }
+        }*/
         connectToObject(localpath);
         
     }    
