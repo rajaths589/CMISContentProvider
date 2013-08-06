@@ -142,18 +142,12 @@ public class CMISConnect {
         if(URI.startsWith(cmisHTTP))
         {
             repositoryURL = "cmis://";
-            URI = URI.replaceFirst(cmisHTTP, "http");
-            String tempURL = URI.substring(7);
-            tempURL = tempURL.replaceAll("//", "/");
-            URI = "http://" + tempURL;        
+            URI = URI.replaceFirst(cmisHTTP, "http");                              
         }
         else if(URI.startsWith(cmisHTTPS))
         {
             repositoryURL = "cmiss://";
-            URI = URI.replaceFirst(cmisHTTPS, "https");
-            String tempURL = URI.substring(8);
-            tempURL = tempURL.replaceAll("//", "/");
-            URI = "http://" + tempURL;        
+            URI = URI.replaceFirst(cmisHTTPS, "https");                
         }               
         if(URI.endsWith("/"))
             URI = URI.substring(0,URI.length()-1);
