@@ -28,7 +28,6 @@ import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.XComponentContext;
-import com.sun.star.util.Date;
 import com.sun.star.util.DateTime;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.aoo.cmisucp.unobojects.CMISInputStream;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -78,14 +76,16 @@ public class CMISResourceManager {
         connected = connect.getSession();        
         generateFolderorDocument();    
         m_Connect = connect;
+        url = connect.getURL();
     }
     
-    public CMISResourceManager(XComponentContext xContext, CmisObject obj, Session s)
+    public CMISResourceManager(XComponentContext xContext, CmisObject obj, Session s, String mURL)
     {
         object = obj;
         connected = s;
         generateFolderorDocument();
         m_Connect = null;
+        url = mURL;
     }
     private void generateFolderorDocument()
     {
@@ -245,7 +245,7 @@ public class CMISResourceManager {
         } else if(PropertyID.equalsIgnoreCase("CasePreservingURL")){
             return new Any(Type.BOOLEAN,true);
         }else if(PropertyID.equalsIgnoreCase("TargetURL")){
-            return new Any(Type.STRING,"");
+                return new Any(Type.STRING, url);            
         } else if(PropertyID.equalsIgnoreCase("BaseURI")){
             return new Any(Type.STRING,m_Connect.getParentURL());
         }else {
@@ -419,7 +419,7 @@ public class CMISResourceManager {
         }
     }
     
-    public  List<String> getProperties(Property[] props)
+    public List<String> getProperties(Property[] props)
     {
         List<String> returnProperties = new ArrayList<String>();
         
@@ -524,8 +524,18 @@ public class CMISResourceManager {
             return null;
     }
         
-    
-    //public void transfer(CmisObject transferObject, Session transferSession, String newName ) throws IOException, InteractiveBadTransferURLException
+    public CMISResourceManager getChild(String name)
+    {
+        for(CmisObject obj:getChildren())
+        {
+            if(obj.getName().equals(name))
+            {
+                return new CMISResourceManager(m_Context, obj, connected, url+"/"+obj.getName());
+            }
+        }
+        
+        return null;
+    }
     public void transfer(CMISConnect connect, String newName ) throws IOException, InteractiveBadTransferURLException
     {
         if(isDocument)
@@ -541,7 +551,7 @@ public class CMISResourceManager {
             else if(transferResource.isFolder)
             {
                 createFolder(newName);
-                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+newName), connected);
+                CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+newName), connected, url+"/"+newName);
                 for(CmisObject child:transferResource.getFolder().getChildren())
                 {                 
                     CMISConnect childConnect = new CMISConnect(m_Context, child, connected);

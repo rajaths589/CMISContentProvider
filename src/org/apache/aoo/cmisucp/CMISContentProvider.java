@@ -20,6 +20,8 @@
  *************************************************************/
 package org.apache.aoo.cmisucp;
 
+import com.sun.star.io.IOException;
+import com.sun.star.io.NotConnectedException;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
@@ -129,11 +131,15 @@ public final class CMISContentProvider extends WeakBase
         if(xRet!=null)
             return xRet;
         
-        CMISContent cmisObj;
+        CMISContent cmisObj = null;
         try {
             cmisObj = new CMISContent(m_xContext, Identifier);
         } catch (ContentCreationException ex) {
             return null;
+        } catch (NotConnectedException ex) {
+            Logger.getLogger(CMISContentProvider.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(CMISContentProvider.class.getName()).log(Level.SEVERE, null, ex);
         }
         registerNewContent(cmisObj,Identifier);            
         

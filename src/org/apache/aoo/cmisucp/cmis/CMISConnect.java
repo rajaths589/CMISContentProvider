@@ -47,6 +47,7 @@ public class CMISConnect {
     private String parentName;
     private String repositoryURL;
     private String url;
+    private String parent_localpath;
     
     private Session connected_session;
     private Folder root;
@@ -88,8 +89,9 @@ public class CMISConnect {
     
     public CMISConnect(XComponentContext xContext, CmisObject ob, Session s)
     {
+        m_Context = xContext;
         content = ob;
-        connected_session = s;
+        connected_session = s;       
     }
     public CMISConnect(XComponentContext xComponentContext, String uri, String user, String pwd )
     {

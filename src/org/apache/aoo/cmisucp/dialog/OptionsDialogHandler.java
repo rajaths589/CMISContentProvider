@@ -4,6 +4,7 @@ import com.sun.star.awt.XControlContainer;
 import com.sun.star.awt.XWindow;
 import com.sun.star.beans.PropertyState;
 import com.sun.star.beans.PropertyValue;
+import com.sun.star.beans.XPropertySet;
 import com.sun.star.lang.WrappedTargetRuntimeException;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
@@ -19,6 +20,7 @@ public final class OptionsDialogHandler extends WeakBase
     private final XComponentContext m_xContext;
     private static final String m_implementationName = OptionsDialogHandler.class.getName();
     private final XMultiComponentFactory m_xMCF;
+    private final XPropertySet m_xPropOptions;
     // Controls in the Window
     private String m_Window = "CMISUCPOptionsPage";
     private String m_Controls[] = {"head","ListBox1","ListBox2","url","user","edit","delete","add"};
@@ -29,15 +31,17 @@ public final class OptionsDialogHandler extends WeakBase
         m_xMCF = m_xContext.getServiceManager();
         
         XMultiServiceFactory xConfig;
-        try{
-            xConfig = (XMultiServiceFactory) UnoRuntime.queryInterface(XMultiServiceFactory.class, m_xMCF.createInstanceWithContext("com.sun.star.configuration.ConfigurationProvider", context));
-            
+        try
+        {
+            xConfig = (XMultiServiceFactory) UnoRuntime.queryInterface(XMultiServiceFactory.class, m_xMCF.createInstanceWithContext("com.sun.star.configuration.ConfigurationProvider", context));            
             Object args[] = new Object[1];
-            args[0] = new PropertyValue("nodepath", 0, args, PropertyState.DIRECT_VALUE);
-        }catch(com.sun.star.uno.Exception ex){
-            throw new WrappedTargetRuntimeException("Could not obtain XMusltiServiceFactory");
+            args[0] = new PropertyValue("nodepath", 0, "/org.apache.aoo.cmisucp.OptionsDialog/Data", PropertyState.DIRECT_VALUE);
+            m_xPropOptions = (XPropertySet) UnoRuntime.queryInterface(XPropertySet.class, xConfig.createInstanceWithArguments("com.sun.star.configuration.ConfigurationUpdateAccess", args));
         }
-        
+        catch(com.sun.star.uno.Exception ex)
+        {
+            throw new WrappedTargetRuntimeException("Could not obtain XMusltiServiceFactory");
+        }   
     };
 
     // com.sun.star.awt.XContainerWindowEventHandler:
@@ -45,9 +49,12 @@ public final class OptionsDialogHandler extends WeakBase
     {        
         if(MethodName.equals("external_event"))
         {
-            try{
+            try
+            {
                 return handleExternalEvent(xWindow, EventObject);
-            }catch(Exception e){
+            }
+            catch(Exception e)
+            {
                 
             }
         }
@@ -55,7 +62,8 @@ public final class OptionsDialogHandler extends WeakBase
     }
     private boolean handleExternalEvent(XWindow xWindow, Object EventObject) throws com.sun.star.uno.Exception
     {
-        try{
+        try
+        {
             String sMethod = AnyConverter.toString(EventObject);
             if(sMethod.equals("ok"))
             {
@@ -66,7 +74,9 @@ public final class OptionsDialogHandler extends WeakBase
                 loadData(xWindow);
             }
             return true;
-        }catch(com.sun.star.lang.IllegalArgumentException ex){
+        }
+        catch(com.sun.star.lang.IllegalArgumentException ex)
+        {
             ex.printStackTrace();
         }
         return false;
@@ -76,9 +86,7 @@ public final class OptionsDialogHandler extends WeakBase
     {
         XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, aWindow);
         if(xControlContainer==null)
-            throw new com.sun.star.uno.Exception("Could not get Control Container from WIndow");                
-        
-        
+            throw new com.sun.star.uno.Exception("Could not get Control Container from WIndow");                              
     }
     
     private void saveData(XWindow aWindow)

@@ -37,13 +37,16 @@ import com.sun.star.io.XInputStream;
 import com.sun.star.io.XOutputStream;
 import com.sun.star.io.XStream;
 import com.sun.star.lang.IllegalArgumentException;
+import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
+import com.sun.star.sdbc.XResultSet;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.task.XInteractionHandler;
+import com.sun.star.ucb.Command;
 import com.sun.star.ucb.ContentAction;
 import com.sun.star.ucb.ContentCreationException;
 import com.sun.star.ucb.ContentEvent;
@@ -56,15 +59,22 @@ import com.sun.star.ucb.OpenMode;
 import com.sun.star.ucb.PropertyValueState;
 import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
+import com.sun.star.ucb.UnsupportedDataSinkException;
+import com.sun.star.ucb.XCommandEnvironment;
 import com.sun.star.ucb.XCommandInfo;
+import com.sun.star.ucb.XCommandProcessor;
 import com.sun.star.ucb.XContent;
 import com.sun.star.ucb.XContentEventListener;
 import com.sun.star.ucb.XContentIdentifier;
+import com.sun.star.ucb.XContentIdentifierFactory;
+import com.sun.star.ucb.XContentProvider;
 import com.sun.star.ucb.XDynamicResultSet;
+import com.sun.star.ucb.XProgressHandler;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
+import com.sun.star.uno.XInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -106,6 +116,7 @@ public final class CMISContent extends ComponentBase
     private static final String m_implementationName = CMISContent.class.getName();
     private static final String[] m_serviceNames = {
         "com.sun.star.ucb.Content"};
+    
     //My variables
     private XContentIdentifier xContentid;
     private CmisObject cmisContent;
@@ -125,8 +136,16 @@ public final class CMISContent extends ComponentBase
 
     private List<XContentEventListener> contentEventListeners = new ArrayList<XContentEventListener>();    
     private Map<XPropertiesChangeListener,List<String>> propertiesChangeListeners = new HashMap<XPropertiesChangeListener,List<String>>();
+    private CMISConnect aConnect;
     
-    public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier) throws ContentCreationException  {
+    //UCB
+    private XMultiComponentFactory xmcf;
+    private XInterface xUCB;
+    private XContentIdentifierFactory xContentIdentifierFactory;
+    private XContentProvider xContentProvider;
+    private boolean ucbInitialized = false;
+    
+    public CMISContent(XComponentContext context, XContentIdentifier xContentIdentifier) throws ContentCreationException, NotConnectedException, IOException  {
                 
         m_xContext = context;
         xContentid = xContentIdentifier;        
@@ -140,7 +159,7 @@ public final class CMISContent extends ComponentBase
         
     }
 
-    public CMISContent(XComponentContext context, String type, String uri) throws ContentCreationException
+    public CMISContent(XComponentContext context, String type, String uri) throws ContentCreationException, NotConnectedException, IOException
     {        
         m_xContext = context;
         contentType = type;
@@ -160,34 +179,24 @@ public final class CMISContent extends ComponentBase
     }
     
     //My method
-    public void processIdentifier(String uri) throws ContentCreationException {
-
-        uri = uri.substring(6);        
-        
-        log.log(Level.INFO, "URI:{0}", uri);
-
-        CMISConnect aConnect;
-
+    public void processIdentifier(String uri) throws ContentCreationException, NotConnectedException, IOException {                
         try
         {            
-            aConnect = new CMISConnect(m_xContext, xContentid.getContentIdentifier(), "rajaths589", "*****");
+            aConnect = new CMISConnect(m_xContext, uri, "rajaths589", "*****");
             connected_session = aConnect.getSession();
             cmisContent = aConnect.getObject();
             resourceManager = new CMISResourceManager(m_xContext, aConnect);
-            
         }
         catch(CmisBaseException e)
         {
             exists = false;            
             if(e.getExceptionName().equalsIgnoreCase(CmisConnectionException.EXCEPTION_NAME))
             {
-                // To-Do . connected_session - not connected;
+                throw new NotConnectedException("Cannot connect to URI:"+uri);                
             }
             else if(e.getExceptionName().equalsIgnoreCase(CmisObjectNotFoundException.EXCEPTION_NAME))
-            {
-                
-                    //throw unknown path exception                
-                
+            {                                    
+                throw new IOException("object not found");
             }
             else
             {
@@ -197,7 +206,7 @@ public final class CMISContent extends ComponentBase
         }
         exists = true;
         setContentType();
-        // cache propertiess        
+        // cache properties
     }
 
     private void setContentType()
@@ -230,13 +239,11 @@ public final class CMISContent extends ComponentBase
     }
 
     // com.sun.star.beans.XPropertySetInfoChangeNotifier:
-    public void addPropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {
-        // TODO: Insert your implementation for "addPropertySetInfoChangeListener" here.       
+    public void addPropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {        
         throw new UnsupportedOperationException();
     }
 
-    public void removePropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {
-        // TODO: Insert your implementation for "removePropertySetInfoChangeListener" here.
+    public void removePropertySetInfoChangeListener(com.sun.star.beans.XPropertySetInfoChangeListener Listener) {        
         throw new UnsupportedOperationException();
     }
 
@@ -250,9 +257,8 @@ public final class CMISContent extends ComponentBase
     }
 
     // com.sun.star.container.XChild:
-    public Object getParent() {
-        //To-do
-        return null;
+    public Object getParent() {        
+        return null;            // Yet to Implement
     }
 
     public void setParent(Object Parent) throws com.sun.star.lang.NoSupportException {
@@ -264,8 +270,7 @@ public final class CMISContent extends ComponentBase
         return xContentid;
     }
 
-    public String getContentType() {
-        //To-Do
+    public String getContentType() {        
         return contentType;
     }
 
@@ -284,25 +289,22 @@ public final class CMISContent extends ComponentBase
 
     // com.sun.star.ucb.XCommandInfoChangeNotifier:
     public void addCommandInfoChangeListener(com.sun.star.ucb.XCommandInfoChangeListener Listener) {
-        // TODO: Insert your implementation for "addCommandInfoChangeListener" here.
+        throw new UnsupportedOperationException();
     }
 
     public void removeCommandInfoChangeListener(com.sun.star.ucb.XCommandInfoChangeListener Listener) {
-        // TODO: Insert your implementation for "removeCommandInfoChangeListener" here.
+        throw new UnsupportedOperationException();
     }
 
     // com.sun.star.ucb.XCommandProcessor:
-    public int createCommandIdentifier() {
-        // TODO: Exchange the default return implementation for "createCommandIdentifier" !!!
-        // NOTE: Default initialized polymorphic structs can cause problems
-        // because of missing default initialization of primitive types of
-        // some C++ compilers or different Any initialization in Java and C++
-        // polymorphic structs.
-        return 0;
+    public int createCommandIdentifier() {        
+        return 0;        
     }
 
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
-        //XInteractionHandler xInteractionHandler = Environment.getInteractionHandler();     
+        XInteractionHandler xInteractionHandler;
+        if(Environment!=null) 
+            xInteractionHandler = Environment.getInteractionHandler();
         
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
@@ -323,28 +325,33 @@ public final class CMISContent extends ComponentBase
         else if (aCommand.Name.equalsIgnoreCase("setPropertyValues")) 
         {
             PropertyValue[] pValues;
-            try{
-            pValues = (PropertyValue[]) AnyConverter.toArray(aCommand.Argument);
-            }catch(Exception e){
+            try
+            {
+                pValues = (PropertyValue[]) AnyConverter.toArray(aCommand.Argument);
+            }
+            catch(Exception e)
+            {
                 throw new IllegalArgumentException("Incompatible argument");
             }                
-            log.info("setPropertyValues()");
             return setPropertyValues(pValues);
-        }else if (aCommand.Name.equalsIgnoreCase("Open")) 
-        {
-            log.info("open()");
-
+        }
+        else if (aCommand.Name.equalsIgnoreCase("Open")) 
+        {        
             OpenCommandArgument2 openArg;
-            try{
+            try
+            {
                 openArg = (OpenCommandArgument2) AnyConverter.toObject(OpenCommandArgument2.class, aCommand.Argument);
-            }catch(Exception e){
+            }
+            catch(Exception e)
+            {
                 throw new IllegalArgumentException("Unsupported argument");
             }
             
-            if (isFolder()) {
-                if ((openArg.Mode == OpenMode.ALL) || (openArg.Mode == OpenMode.DOCUMENTS) || (openArg.Mode == OpenMode.FOLDERS)) {                    
-                    return openFolder(openArg);
-                    
+            if (isFolder()) 
+            {
+                if ((openArg.Mode == OpenMode.ALL) || (openArg.Mode == OpenMode.DOCUMENTS) || (openArg.Mode == OpenMode.FOLDERS)) 
+                {                    
+                    return openFolder(openArg);                
                 }
                 else
                 {
@@ -363,7 +370,7 @@ public final class CMISContent extends ComponentBase
                     {
                         XActiveDataStreamer xDataStream = UnoRuntime.queryInterface(XActiveDataStreamer.class, openArg.Sink);                                
                         if(xDataStream!=null)
-                        {                                                         
+                        {                                                                                     
                             XStream xStream = new XStream() {                                
                                 public XInputStream getInputStream() {
                                     return xInp;
@@ -403,9 +410,12 @@ public final class CMISContent extends ComponentBase
         else if(aCommand.Name.equalsIgnoreCase("CreateNewContent"))
         {
             ContentInfo info;
-            try{
+            try
+            {
                 info = (ContentInfo) AnyConverter.toObject(ContentInfo.class, aCommand.Argument);
-            }catch(Exception e){
+            }
+            catch(Exception e)
+            {
                 throw new IllegalArgumentException("Incompatible argument");
             }
             return createNewContent(info);
@@ -413,33 +423,46 @@ public final class CMISContent extends ComponentBase
         else if(aCommand.Name.equalsIgnoreCase("Insert"))
         {
             InsertCommandArgument insertArg;
-            try{
+            try
+            {
                 insertArg = (InsertCommandArgument) AnyConverter.toObject(InsertCommandArgument.class, aCommand.Argument);
-            }catch(Exception e){
+            }
+            catch(Exception e)
+            {
                 throw new IllegalArgumentException("incompatible argument");
             }                
-            try {
+            
+            try 
+            {
                 return insert(insertArg);
-            } catch (java.io.IOException ex) {
+            }
+            catch (java.io.IOException ex) 
+            {
                 throw new IllegalArgumentException("IO stream failure. Illegal datasink");
             }
         }
         else if(aCommand.Name.equalsIgnoreCase("transfer"))
         {
             TransferInfo aTransInfo;
-            try{
+            try
+            {
                 aTransInfo = (TransferInfo) AnyConverter.toObject(TransferInfo.class, aCommand.Argument);            
-            }catch(Exception e){
+            }
+            catch(Exception e)
+            {
                 throw new IllegalArgumentException("Incompatible Transfer Argumnet");
             }
-            
+            /*
             CMISConnect transferConnect;
-            try{
-            transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
-            }catch(CmisBaseException e)
+            try
             {
-                throw new IllegalArgumentException("Wrong repository data. Probably usernam,password/soruceURL is wrong");
+                transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
             }
+            catch(CmisBaseException e)
+            {
+                throw new IllegalArgumentException("Wrong repository data. Probably username,password/soruceURL is wrong");
+            }
+ 
             //Name Clash not implemented.
             try 
             {
@@ -456,7 +479,117 @@ public final class CMISContent extends ComponentBase
             {                
                 CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect.getObject(), transferConnect.getSession());
                 transferRes.delete();
-            }            
+            }*/
+            
+            if(aTransInfo.SourceURL.startsWith("cmis")||aTransInfo.SourceURL.startsWith("cmiss"))
+            {
+                CMISConnect transferConnect;
+                try
+                {
+                    transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
+                }
+                catch(CmisBaseException e)
+                {
+                    throw new IllegalArgumentException("Wrong repository data. Probably username,password/soruceURL is wrong");
+                }
+ 
+                //Name Clash not implemented.
+                try 
+                {
+                    if(aTransInfo.NewTitle!=null)
+                        resourceManager.transfer(transferConnect, aTransInfo.NewTitle);
+                    else
+                        resourceManager.transfer(transferConnect,transferConnect.getObject().getName());
+                }    
+                catch (java.io.IOException ex) 
+                {
+                    throw new IllegalArgumentException();
+                }
+                if(aTransInfo.MoveData==true)
+                {                
+                    CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect);
+                    transferRes.delete();
+                }
+            }
+            else
+            {
+                XContentIdentifier xTempTransfer;
+                if(ucbInitialized)
+                    xTempTransfer = xContentIdentifierFactory.createContentIdentifier(aTransInfo.SourceURL);
+                else
+                {
+                    initializeUCB();
+                    xTempTransfer = xContentIdentifierFactory.createContentIdentifier(aTransInfo.SourceURL);
+                }
+                
+                XContent transferContent = xContentProvider.queryContent(xTempTransfer);
+                if(transferContent!=null)
+                {
+                    XCommandProcessor xCP = UnoRuntime.queryInterface(XCommandProcessor.class, transferContent);
+                    Command isTransFolder = new Command();
+                    isTransFolder.Name = "getPropertyValues";
+                    isTransFolder.Handle = -1;
+                    
+                    Property parr[] = new Property[1];
+                    Property pFolder = new Property();
+                    pFolder.Name = "isFolder";
+                    pFolder.Handle = -1;
+                    pFolder.Type = Type.BOOLEAN;
+                    pFolder.Attributes = PropertyAttribute.READONLY;
+                    parr[0] = pFolder;
+                    isTransFolder.Argument = parr;
+                                        
+                    if(!(((XRow)AnyConverter.toObject(XRow.class,xCP.execute(isTransFolder, -1, Environment))).getBoolean(1)))
+                    {
+                        if(aTransInfo.NewTitle!=null)
+                        {
+                            XActiveDataSink xActiveDataSink = new CMISActiveDataSink(m_xContext);
+                            Command openDoc = new Command();
+                            openDoc.Name = "open";
+                            openDoc.Handle = -1;
+                            OpenCommandArgument2 tempOpen = new OpenCommandArgument2();
+                            tempOpen.Mode = OpenMode.DOCUMENT;
+                            tempOpen.Sink = new Any(new Type(XActiveDataSink.class),xActiveDataSink);
+                            openDoc.Argument = tempOpen;
+                            xCP.execute(openDoc, -1, Environment);
+                            String mimetype;
+                            Command mimeType = new Command();
+                            mimeType.Name = "getPropertyValues";
+                            Property p[] = new Property[1];
+                            Property pMime = new Property();
+                            pMime.Name = "MediaType";
+                            pMime.Handle = -1;
+                            pMime.Attributes = PropertyAttribute.READONLY;
+                            pMime.Type = Type.STRING;
+                            p[0] = pMime;
+                            mimeType.Handle = -1;
+                            mimeType.Argument = p;
+                            mimetype = UnoRuntime.queryInterface(XRow.class, xCP.execute(mimeType, -1, Environment)).getString(1);
+                            try 
+                            {
+                                resourceManager.createDocument(xActiveDataSink.getInputStream(), aTransInfo.NewTitle, mimetype);
+                            }
+                            catch (java.io.IOException ex) 
+                            {
+                                Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                            if(aTransInfo.MoveData)
+                            {
+                                Command del = new Command();
+                                del.Name = "delete";
+                                del.Handle = -1;
+                                xCP.execute(del, -1, null);
+                            }
+                        }
+                        else
+                        {
+                            // Move folder
+                            
+                        }
+                    }
+                }
+            }
+            
         }
         else if(aCommand.Name.equalsIgnoreCase("delete"))
         {
@@ -470,21 +603,92 @@ public final class CMISContent extends ComponentBase
             arg1.Action = ContentAction.REMOVED;
             arg1.Content = this;
             arg1.Id = xContentid; 
-            if(getIdentifier().getContentProviderScheme().equals("cmis"))
-            {                
-                XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
-                CMISContent xParent = new CMISContent(m_xContext, xIdParent);
-                xParent.contentListenerNotifier(arg1);
-            }
-            else if(getIdentifier().getContentProviderScheme().equals("cmiss"))
-            {
-                XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
-                CMISContent xParent = new CMISContent(m_xContext, xIdParent);
-                xParent.contentListenerNotifier(arg1);
+            if(aConnect!=null)
+            {    
+                if(getIdentifier().getContentProviderScheme().equals("cmis"))
+                {                
+                    XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, aConnect.getParentURL());
+                    CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                    xParent.contentListenerNotifier(arg1);
+                }
+                else if(getIdentifier().getContentProviderScheme().equals("cmiss"))
+                {
+                    XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, aConnect.getParentURL());
+                    CMISContent xParent = new CMISContent(m_xContext, xIdParent);
+                    xParent.contentListenerNotifier(arg1);
+                }
             }
             contentListenerNotifier(arg);
         }        
         return com.sun.star.uno.Any.VOID;
+    }
+    
+    private void initializeUCB() throws com.sun.star.uno.Exception
+    {
+        xmcf = m_xContext.getServiceManager();
+        String keys[] = new String[2];
+        keys[0] = "Local";
+        keys[1] = "Office";
+                
+        xUCB = (XInterface) xmcf.createInstanceWithArgumentsAndContext("com.sun.star.ucb.UniversalContentBroker", keys,m_xContext);
+        xContentIdentifierFactory = (XContentIdentifierFactory)UnoRuntime.queryInterface(XContentIdentifierFactory.class, xUCB);
+        xContentProvider = (XContentProvider)UnoRuntime.queryInterface(XContentProvider.class, xUCB);
+        
+        ucbInitialized = true;
+    }
+    private void transferDifferentSource(XContent transContent, String Name, XCommandEnvironment xCommandEnv, CMISResourceManager resourceManager1) throws com.sun.star.uno.Exception, java.io.IOException
+    {
+        XCommandProcessor xCommandProcessor = UnoRuntime.queryInterface(XCommandProcessor.class, transContent);
+        resourceManager1.createFolder(Name);
+        CMISResourceManager newFolderManager = resourceManager1.getChild(Name);
+        Property prop[] = new Property[2];
+        prop[0] = new Property("Title",-1, Type.STRING, PropertyAttribute.BOUND);
+        prop[1] = new Property("MediaType", -1, Type.STRING, PropertyAttribute.READONLY);
+        OpenCommandArgument2 openFolderChildren = new OpenCommandArgument2();
+        openFolderChildren.Properties = prop;
+        openFolderChildren.Mode = OpenMode.DOCUMENTS;
+        Command cmd = new Command();
+        cmd.Name = "open";
+        cmd.Argument = openFolderChildren;
+        cmd.Handle = -1;
+        
+        XDynamicResultSet xDynamicResultSet = UnoRuntime.queryInterface(XDynamicResultSet.class, xCommandProcessor.execute(cmd, -1, xCommandEnv));
+        XResultSet xResultSet = xDynamicResultSet.getStaticResultSet();
+        
+        while(xResultSet.next())
+        {
+            XRow rowProps = UnoRuntime.queryInterface(XRow.class, xResultSet);
+            String title = rowProps.getString(1);
+            String mimeType = rowProps.getString(2);
+            XActiveDataSink xActiveDataSink = new CMISActiveDataSink(m_xContext);
+            Command openDoc = new Command();
+            openDoc.Name = "open";
+            openDoc.Handle = -1;
+            OpenCommandArgument2 tempOpen = new OpenCommandArgument2();
+            tempOpen.Mode = OpenMode.DOCUMENT;
+            tempOpen.Sink = new Any(new Type(XActiveDataSink.class),xActiveDataSink);
+            openDoc.Argument = tempOpen;
+            String child_identifier = transContent.getIdentifier().getContentIdentifier()+"/"+title;
+            XContentIdentifier xChildID = xContentIdentifierFactory.createContentIdentifier(child_identifier);
+            XContent xChildDoc = xContentProvider.queryContent(xChildID);
+            XCommandProcessor xCmdChild = (XCommandProcessor) UnoRuntime.queryInterface(XCommandProcessor.class, xChildDoc);
+            xCmdChild.execute(openDoc, -1, xCommandEnv);                        
+            newFolderManager.createDocument(xActiveDataSink.getInputStream(), title, mimeType);
+        }
+        openFolderChildren.Mode = OpenMode.FOLDERS;
+        Property props[] = new Property[1];
+        props[0] = new Property("Title", -1, Type.STRING, PropertyAttribute.BOUND);
+        xDynamicResultSet = UnoRuntime.queryInterface(XDynamicResultSet.class, xCommandProcessor.execute(cmd, -1, xCommandEnv));
+        xResultSet = xDynamicResultSet.getStaticResultSet();
+        while(xResultSet.next())
+        {
+            XRow rowProps = UnoRuntime.queryInterface(XRow.class, xResultSet);
+            String title = rowProps.getString(1);
+            String child_identifier = transContent.getIdentifier().getContentIdentifier()+"/"+title;
+            XContentIdentifier xChildID = xContentIdentifierFactory.createContentIdentifier(child_identifier);
+            XContent xChildFolder = xContentProvider.queryContent(xChildID);
+            transferDifferentSource(xChildFolder, title, xCommandEnv, newFolderManager);
+        }
     }
     
     //My method
@@ -524,7 +728,7 @@ public final class CMISContent extends ComponentBase
                 arg.Content = this;
                 arg.Id = xContentid;
                 cmisContent  = FileUtils.createFolder(parentFolder, path.substring(6,path.lastIndexOf("/")+1), "cmis:folder");
-                resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session);               
+                //resourceManager = new CMISResourceManager(m_xContext, cmisContent, connected_session, );               
                 if(getIdentifier().getContentProviderScheme().equals("cmis"))
                 {
                     XContentIdentifier xIdParent = new CMISContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
@@ -536,8 +740,7 @@ public final class CMISContent extends ComponentBase
                     XContentIdentifier xIdParent = new CMISSContentIdentifier(m_xContext, getIdentifier().getContentIdentifier());
                     CMISContent xParent = new CMISContent(m_xContext, xIdParent);
                     xParent.contentListenerNotifier(arg);
-                }
-                //contentListenerNotifier(arg);
+                }                
                 // Content Event to be added.
                 return null;
             }
@@ -563,9 +766,8 @@ public final class CMISContent extends ComponentBase
                    }
                }
                else
-               {
-                //throw some exception;
-                   throw new UnsupportedOperationException("Name not set");
+               {                
+                   throw new UnsupportedOperationException("Name not set");                   
                }
             }
             else
@@ -602,11 +804,16 @@ public final class CMISContent extends ComponentBase
         
         Folder f = resourceManager.getFolder();
         OperationContext opCon = connected_session.createOperationContext();
+        
         if (oarg.Mode == OpenMode.ALL) 
         {
             for (CmisObject o : f.getChildren()) 
-            {                                                       
-                CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
+            {                           
+                CMISResourceManager tempChildResource;
+                if(xContentid.getContentIdentifier().endsWith("/"))
+                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+o.getName());
+                else
+                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+"/"+o.getName());
                 
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
                 PropertyAndValueSet childValue;
@@ -623,7 +830,12 @@ public final class CMISContent extends ComponentBase
             opCon.setFilterString("cmis:document");
             for (CmisObject o : f.getChildren(opCon)) 
             {                
-                CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
+                CMISResourceManager tempChildResource;
+                if(xContentid.getContentIdentifier().endsWith("/"))
+                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+o.getName());
+                else
+                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+"/"+o.getName());
+                
                 
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
                 PropertyAndValueSet childValue;
@@ -640,7 +852,12 @@ public final class CMISContent extends ComponentBase
             opCon.setFilterString("cmis:folder");
             for (CmisObject o : f.getChildren(opCon)) 
             {
-                CMISResourceManager tempChildResource = new CMISResourceManager(m_xContext, o, connected_session);
+                CMISResourceManager tempChildResource;
+                if(xContentid.getContentIdentifier().endsWith("/"))
+                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+o.getName());
+                else
+                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+"/"+o.getName());
+                
                 
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
                 PropertyAndValueSet childValue;
@@ -868,6 +1085,10 @@ private Any getPropertyValues(Property[] request)
         try {
             xContent = new CMISContent(m_xContext, Info.Type, path);
         } catch (ContentCreationException ex) {
+            Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NotConnectedException ex) {
+            Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
             Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
         }
         return xContent;
