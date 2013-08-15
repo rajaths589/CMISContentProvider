@@ -41,6 +41,7 @@ import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
+import com.sun.star.lib.uno.adapter.ByteArrayToXInputStreamAdapter;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XResultSet;
@@ -362,16 +363,20 @@ public final class CMISContent extends ComponentBase
             {
                 if(openArg.Mode == OpenMode.DOCUMENT)
                 {                    
-                    XInputStream xInp = null;
-                    try {
-                        xInp = resourceManager.getInputStream();
-                    } catch (java.io.IOException ex) {
+                    XInputStream testStream = null;
+                    try 
+                    {
+                        testStream = resourceManager.getInputStream();
+                    }
+                    catch (java.io.IOException ex) 
+                    {
                         Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
                     }
-                    final XInputStream xInputStream1 = xInp;
+                    
+                    final XInputStream xInp = testStream;
                     XActiveDataSink xDataSink = UnoRuntime.queryInterface(XActiveDataSink.class,openArg.Sink);
                     if(xDataSink!=null)
-                        xDataSink.setInputStream(xInp);
+                        xDataSink.setInputStream(testStream);
                     else
                     {
                         XActiveDataStreamer xDataStream = UnoRuntime.queryInterface(XActiveDataStreamer.class, openArg.Sink);                                
@@ -379,7 +384,7 @@ public final class CMISContent extends ComponentBase
                         {                                                                                     
                             XStream xStream = new XStream() {                                
                                 public XInputStream getInputStream() {
-                                    return xInputStream1;
+                                    return xInp;
                                 }
 
                                 public XOutputStream getOutputStream() {
@@ -642,6 +647,7 @@ public final class CMISContent extends ComponentBase
         
         ucbInitialized = true;
     }
+        
     private void transferDifferentSource(XContent transContent, String Name, XCommandEnvironment xCommandEnv, CMISResourceManager resourceManager1) throws com.sun.star.uno.Exception, java.io.IOException
     {
         XCommandProcessor xCommandProcessor = UnoRuntime.queryInterface(XCommandProcessor.class, transContent);

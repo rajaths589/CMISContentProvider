@@ -21,6 +21,7 @@
 package org.apache.aoo.cmisucp.cmis;
 
 import com.sun.star.beans.Property;
+import com.sun.star.io.NotConnectedException;
 import com.sun.star.io.XInputStream;
 import com.sun.star.lib.uno.adapter.ByteArrayToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
@@ -371,19 +372,27 @@ public class CMISResourceManager {
         return creationDate;
     }
     
-    public XInputStream getInputStream() throws IOException
+    public XInputStream getInputStream() throws IOException, NotConnectedException, com.sun.star.io.IOException
     {
         if(isDocument)
         {   
             //CMISInputStreamAdapter xInputStream;
+            XInputStream xInputStream;
             //xInputStream = new CMISInputStreamAdapter(getDocument().getContentStream().getStream());
+            xInputStream = new CMISInputStreamAdapter(getDocument().getContentStream().getStream());
             //XInputStream xInputStream = new CMISInputStream(m_Context, getDocument());
             //return xInputStream;
-            final int length = (int)getDocument().getContentStreamLength();
-            byte stream[] = new byte[length];
-            getDocument().getContentStream().getStream().read(stream);
-            ByteArrayToXInputStreamAdapter xInputStream = new ByteArrayToXInputStreamAdapter(stream);
-            return xInputStream;            
+            //final int length = (int)getDocument().getContentStreamLength();
+            //byte stream[] = new byte[length];
+            //getDocument().getContentStream().getStream().read(stream);
+            //ByteArrayToXInputStreamAdapter xInputStream = new ByteArrayToXInputStreamAdapter(stream);
+            int length = xInputStream.available();
+            byte arr[][] = new byte[1][];
+            byte bytes[] = new byte[length];
+            arr[0] = bytes;
+            int nr = xInputStream.readBytes(arr, length);
+            ByteArrayToXInputStreamAdapter byteAdapter = new ByteArrayToXInputStreamAdapter(arr[0]);
+            return byteAdapter;            
         }
         else
             return null;
