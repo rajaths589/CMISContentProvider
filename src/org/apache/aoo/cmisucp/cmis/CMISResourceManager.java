@@ -22,6 +22,7 @@ package org.apache.aoo.cmisucp.cmis;
 
 import com.sun.star.beans.Property;
 import com.sun.star.io.XInputStream;
+import com.sun.star.lib.uno.adapter.ByteArrayToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.aoo.cmisucp.helper.CMISInputStreamAdapter;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -369,14 +371,19 @@ public class CMISResourceManager {
         return creationDate;
     }
     
-    public XInputStream getInputStream()
+    public XInputStream getInputStream() throws IOException
     {
         if(isDocument)
-        {
-            com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter xInputStream;
-            xInputStream = new InputStreamToXInputStreamAdapter(getDocument().getContentStream().getStream());
+        {   
+            //CMISInputStreamAdapter xInputStream;
+            //xInputStream = new CMISInputStreamAdapter(getDocument().getContentStream().getStream());
             //XInputStream xInputStream = new CMISInputStream(m_Context, getDocument());
-            return xInputStream;
+            //return xInputStream;
+            final int length = (int)getDocument().getContentStreamLength();
+            byte stream[] = new byte[length];
+            getDocument().getContentStream().getStream().read(stream);
+            ByteArrayToXInputStreamAdapter xInputStream = new ByteArrayToXInputStreamAdapter(stream);
+            return xInputStream;            
         }
         else
             return null;

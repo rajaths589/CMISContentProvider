@@ -362,7 +362,13 @@ public final class CMISContent extends ComponentBase
             {
                 if(openArg.Mode == OpenMode.DOCUMENT)
                 {                    
-                    final XInputStream xInp  = resourceManager.getInputStream();
+                    XInputStream xInp = null;
+                    try {
+                        xInp = resourceManager.getInputStream();
+                    } catch (java.io.IOException ex) {
+                        Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    final XInputStream xInputStream1 = xInp;
                     XActiveDataSink xDataSink = UnoRuntime.queryInterface(XActiveDataSink.class,openArg.Sink);
                     if(xDataSink!=null)
                         xDataSink.setInputStream(xInp);
@@ -373,7 +379,7 @@ public final class CMISContent extends ComponentBase
                         {                                                                                     
                             XStream xStream = new XStream() {                                
                                 public XInputStream getInputStream() {
-                                    return xInp;
+                                    return xInputStream1;
                                 }
 
                                 public XOutputStream getOutputStream() {

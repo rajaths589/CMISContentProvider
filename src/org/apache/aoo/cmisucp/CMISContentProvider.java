@@ -169,8 +169,9 @@ public final class CMISContentProvider extends WeakBase
     
     public int compareContentIds(com.sun.star.ucb.XContentIdentifier Id1, com.sun.star.ucb.XContentIdentifier Id2)
     {
-        //TO-DO
-        return 0;
+        String id1 = Id1.getContentIdentifier();
+        String id2 = Id2.getContentIdentifier();
+        return id1.compareTo(id2);
     }
 
 }
