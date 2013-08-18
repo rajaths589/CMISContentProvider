@@ -24,7 +24,6 @@ import com.sun.star.beans.Property;
 import com.sun.star.io.NotConnectedException;
 import com.sun.star.io.XInputStream;
 import com.sun.star.lib.uno.adapter.ByteArrayToXInputStreamAdapter;
-import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
 import com.sun.star.lib.uno.adapter.XInputStreamToInputStreamAdapter;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.uno.Any;
@@ -132,6 +131,10 @@ public class CMISResourceManager {
             return false;
     }
     
+    public boolean getPrivateWorkingCopy()
+    {
+        return false;
+    }
     public boolean canCheckOut()
     {
         if(isDocument)
@@ -244,7 +247,7 @@ public class CMISResourceManager {
         } else if(PropertyID.equalsIgnoreCase("IsRemoveable")){
             return new Any(Type.BOOLEAN,false);
         } else if(PropertyID.equalsIgnoreCase("IsReadOnly")){
-            return new Any(Type.BOOLEAN,false);
+            return new Any(Type.BOOLEAN,true);
         } else if(PropertyID.equalsIgnoreCase("CasePreservingURL")){
             return new Any(Type.BOOLEAN,true);
         }else if(PropertyID.equalsIgnoreCase("TargetURL")){
