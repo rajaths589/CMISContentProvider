@@ -31,6 +31,7 @@ import com.sun.star.uno.Type;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.util.DateTime;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -71,6 +72,7 @@ public class CMISResourceManager {
     private static final Logger log = Logger.getLogger(CMISResourceManager.class.getName()); 
     private String url;
     private CMISConnect m_Connect;
+    private Document pwc;
     
     public CMISResourceManager(XComponentContext xContext, CMISConnect connect )
     {        
@@ -133,8 +135,48 @@ public class CMISResourceManager {
     
     public boolean getPrivateWorkingCopy()
     {
+        if(isDocument)     
+        {
+            if(canCheckOut())
+            {               
+                pwc = (Document) connected.getObject(getDocument().checkOut());                             
+                return true;
+            }
+        }
         return false;
     }
+
+    public String getLatestVersion()
+    {
+        return getDocument().getObjectOfLatestVersion(false).getVersionLabel();
+    }
+    
+    public String getCurrentVersion()
+    {
+        return getDocument().getVersionLabel();
+    }
+    
+    public boolean isLatestVersion()
+    {
+        return getDocument().isLatestVersion();
+    }
+    
+    public boolean checkIn(boolean isMajor, XInputStream stream, String checkinComment) throws IOException
+    {
+        if(pwc!=null)
+        {
+            if(canCheckIn())
+            {
+                XInputStreamToInputStreamAdapter inputStream = new XInputStreamToInputStreamAdapter(stream);            
+                ContentStream createContentStream = connected.getObjectFactory().createContentStream(getName(), inputStream.available(), getMimeType(), inputStream);
+                documentObject = (Document) pwc.checkIn(isMajor, null,createContentStream,checkinComment);
+                pwc = null;
+                return true;
+            }
+        }
+        return false;
+    }
+    
     public boolean canCheckOut()
     {
         if(isDocument)
@@ -378,22 +420,13 @@ public class CMISResourceManager {
     public XInputStream getInputStream() throws IOException, NotConnectedException, com.sun.star.io.IOException
     {
         if(isDocument)
-        {   
-            //CMISInputStreamAdapter xInputStream;
-            XInputStream xInputStream;
-            //xInputStream = new CMISInputStreamAdapter(getDocument().getContentStream().getStream());
-            xInputStream = new CMISInputStreamAdapter(getDocument().getContentStream().getStream());
-            //XInputStream xInputStream = new CMISInputStream(m_Context, getDocument());
-            //return xInputStream;
-            //final int length = (int)getDocument().getContentStreamLength();
-            //byte stream[] = new byte[length];
-            //getDocument().getContentStream().getStream().read(stream);
-            //ByteArrayToXInputStreamAdapter xInputStream = new ByteArrayToXInputStreamAdapter(stream);
-            int length = xInputStream.available();
+        {                           
+            InputStream inp = getDocument().getContentStream().getStream();
+            int length = inp.available();
             byte arr[][] = new byte[1][];
             byte bytes[] = new byte[length];
-            arr[0] = bytes;
-            int nr = xInputStream.readBytes(arr, length);
+            arr[0] = bytes;           
+            int nr = inp.read(bytes);
             ByteArrayToXInputStreamAdapter byteAdapter = new ByteArrayToXInputStreamAdapter(arr[0]);
             return byteAdapter;            
         }
@@ -438,6 +471,7 @@ public class CMISResourceManager {
         }
     }
     
+    // to be removed in consultation with Mentor
     public List<String> getProperties(Property[] props)
     {
         List<String> returnProperties = new ArrayList<String>();
