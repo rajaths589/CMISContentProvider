@@ -73,6 +73,7 @@ public class CMISResourceManager {
     private String url;
     private CMISConnect m_Connect;
     private Document pwc;
+    private String pwc_version;
     
     public CMISResourceManager(XComponentContext xContext, CMISConnect connect )
     {        
@@ -140,6 +141,7 @@ public class CMISResourceManager {
             if(canCheckOut())
             {               
                 pwc = (Document) connected.getObject(getDocument().checkOut());                             
+                pwc_version = pwc.getVersionLabel();
                 return true;
             }
         }
@@ -151,9 +153,12 @@ public class CMISResourceManager {
         return getDocument().getObjectOfLatestVersion(false).getVersionLabel();
     }
     
-    public String getCurrentVersion()
+    public String getPWCVersion()
     {
-        return getDocument().getVersionLabel();
+        if(pwc!=null)            
+            return pwc_version;
+        
+        return null;       
     }
     
     public boolean isLatestVersion()
@@ -171,6 +176,7 @@ public class CMISResourceManager {
                 ContentStream createContentStream = connected.getObjectFactory().createContentStream(getName(), inputStream.available(), getMimeType(), inputStream);
                 documentObject = (Document) pwc.checkIn(isMajor, null,createContentStream,checkinComment);
                 pwc = null;
+                pwc_version = null;
                 return true;
             }
         }
@@ -227,7 +233,12 @@ public class CMISResourceManager {
     public Document getDocument()
     {
         if(isDocument)
-            return documentObject;
+        {
+            if(pwc!=null)
+                return pwc;
+            else
+                return documentObject;
+        }
         else
             return null;            
     }
@@ -292,11 +303,15 @@ public class CMISResourceManager {
             return new Any(Type.BOOLEAN,true);
         } else if(PropertyID.equalsIgnoreCase("CasePreservingURL")){
             return new Any(Type.BOOLEAN,true);
-        }else if(PropertyID.equalsIgnoreCase("TargetURL")){
+        } else if(PropertyID.equalsIgnoreCase("TargetURL")){
                 return new Any(Type.STRING, url);            
         } else if(PropertyID.equalsIgnoreCase("BaseURI")){
             return new Any(Type.STRING,m_Connect.getParentURL());
-        }else {
+        } else if(PropertyID.equalsIgnoreCase("LatestVesionLabel")){
+            return new Any(Type.STRING,getLatestVersion());
+        } else if(PropertyID.equalsIgnoreCase("CurrentVersionLabel")){
+            return new Any(Type.STRING,getPWCVersion());
+        } else {
             return null;
         }
     }

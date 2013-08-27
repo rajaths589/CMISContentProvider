@@ -62,6 +62,8 @@ public final class CMISCommandInfo extends WeakBase
         supported_commands.add(new CommandInfo("globalTransfer",-1,new Type(GlobalTransferCommandArgument.class)));
         supported_commands.add(new CommandInfo("createNewContent",-1,Type.ANY));
         supported_commands.add(new CommandInfo("CreatableContentsInfo",-1,Type.ANY));
+        supported_commands.add(new CommandInfo("checkin", -1, Type.ANY));
+        supported_commands.add(new CommandInfo("checkout",-1,Type.VOID));
     }
     
     // com.sun.star.ucb.XCommandInfo:

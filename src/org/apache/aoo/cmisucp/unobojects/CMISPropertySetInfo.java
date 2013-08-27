@@ -78,6 +78,8 @@ public final class CMISPropertySetInfo extends WeakBase
         available_properties.add(new Property("BaseURI",-1,Type.STRING,PropertyAttribute.READONLY));
         available_properties.add(new Property("IsReadOnly",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
         available_properties.add(new Property("CasePreservingURL",-1,Type.BOOLEAN,PropertyAttribute.READONLY));
+        available_properties.add(new Property("LatestVersionLabel",-1,Type.STRING,PropertyAttribute.READONLY));
+        available_properties.add(new Property("CurrentVersionLabel",-1,Type.STRING,PropertyAttribute.READONLY));
     }            
     
     // com.sun.star.beans.XPropertySetInfo:

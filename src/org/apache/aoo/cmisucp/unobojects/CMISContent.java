@@ -32,7 +32,6 @@ import com.sun.star.io.IOException;
 import com.sun.star.io.NotConnectedException;
 import com.sun.star.io.XActiveDataSink;
 import com.sun.star.io.XActiveDataStreamer;
-import com.sun.star.io.XDataOutputStream;
 import com.sun.star.io.XInputStream;
 import com.sun.star.io.XOutputStream;
 import com.sun.star.io.XStream;
@@ -41,7 +40,6 @@ import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lang.XSingleComponentFactory;
-import com.sun.star.lib.uno.adapter.ByteArrayToXInputStreamAdapter;
 import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XResultSet;
@@ -57,10 +55,8 @@ import com.sun.star.ucb.InsertCommandArgument;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
-import com.sun.star.ucb.PropertyValueState;
 import com.sun.star.ucb.TransferInfo;
 import com.sun.star.ucb.UnsupportedCommandException;
-import com.sun.star.ucb.UnsupportedDataSinkException;
 import com.sun.star.ucb.XCommandEnvironment;
 import com.sun.star.ucb.XCommandInfo;
 import com.sun.star.ucb.XCommandProcessor;
@@ -70,7 +66,6 @@ import com.sun.star.ucb.XContentIdentifier;
 import com.sun.star.ucb.XContentIdentifierFactory;
 import com.sun.star.ucb.XContentProvider;
 import com.sun.star.ucb.XDynamicResultSet;
-import com.sun.star.ucb.XProgressHandler;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Type;
@@ -86,6 +81,7 @@ import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
 import org.apache.aoo.cmisucp.cmis.CMISConnect;
 import org.apache.aoo.cmisucp.cmis.CMISResourceManager;
+import org.apache.aoo.cmisucp.helper.CheckinCommandArgument;
 import org.apache.aoo.cmisucp.helper.ContentPropertySet;
 import org.apache.aoo.cmisucp.helper.PropertyAndValueSet;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -311,6 +307,22 @@ public final class CMISContent extends ComponentBase
         {
             XCommandInfo xRet = new CMISCommandInfo(m_xContext);
             return xRet;
+        }
+        else if(aCommand.Name.equalsIgnoreCase("checkout"))
+        {            
+            return new Any(Type.BOOLEAN,resourceManager.getPrivateWorkingCopy());
+        }
+        else if(aCommand.Name.equalsIgnoreCase("checkin"))
+        {
+            CheckinCommandArgument checkinCommandArgument = (CheckinCommandArgument) AnyConverter.toObject(CheckinCommandArgument.class, aCommand.Argument);
+            try 
+            {
+                return new Any(Type.BOOLEAN,resourceManager.checkIn(checkinCommandArgument.major, checkinCommandArgument.xInp, checkinCommandArgument.comment));
+            }
+            catch (java.io.IOException ex) 
+            {
+                Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         else if (aCommand.Name.equalsIgnoreCase("getPropertySetInfo")) 
         {
