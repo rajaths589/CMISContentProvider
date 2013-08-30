@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.aoo.cmisucp.helper.CMISInputStreamAdapter;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -229,7 +228,13 @@ public class CMISResourceManager {
             return null;
             
     }
-    
+    public void cancelCheckOut()
+    {
+        if(pwc!=null)
+        {
+            pwc.cancelCheckOut();
+        }
+    }
     public Document getDocument()
     {
         if(isDocument)
@@ -300,7 +305,7 @@ public class CMISResourceManager {
         } else if(PropertyID.equalsIgnoreCase("IsRemoveable")){
             return new Any(Type.BOOLEAN,false);
         } else if(PropertyID.equalsIgnoreCase("IsReadOnly")){
-            return new Any(Type.BOOLEAN,true);
+            return new Any(Type.BOOLEAN,false);
         } else if(PropertyID.equalsIgnoreCase("CasePreservingURL")){
             return new Any(Type.BOOLEAN,true);
         } else if(PropertyID.equalsIgnoreCase("TargetURL")){

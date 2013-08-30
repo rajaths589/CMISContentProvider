@@ -20,6 +20,8 @@
  *************************************************************/
 package org.apache.aoo.cmisucp.unobojects;
 
+import com.sun.star.awt.XDialog;
+import com.sun.star.awt.XDialogProvider2;
 import com.sun.star.beans.Property;
 import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyChangeEvent;
@@ -27,6 +29,10 @@ import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.XPropertiesChangeListener;
 import com.sun.star.beans.XPropertySetInfo;
+import com.sun.star.deployment.PackageInformationProvider;
+import com.sun.star.deployment.XPackageInformationProvider;
+import com.sun.star.frame.XDesktop;
+import com.sun.star.frame.XFrame;
 import com.sun.star.io.BufferSizeExceededException;
 import com.sun.star.io.IOException;
 import com.sun.star.io.NotConnectedException;
@@ -81,6 +87,7 @@ import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
 import org.apache.aoo.cmisucp.cmis.CMISConnect;
 import org.apache.aoo.cmisucp.cmis.CMISResourceManager;
+import org.apache.aoo.cmisucp.dialog.CheckoutDialogHandler;
 import org.apache.aoo.cmisucp.helper.CheckinCommandArgument;
 import org.apache.aoo.cmisucp.helper.ContentPropertySet;
 import org.apache.aoo.cmisucp.helper.PropertyAndValueSet;
@@ -374,11 +381,20 @@ public final class CMISContent extends ComponentBase
             else
             {
                 if(openArg.Mode == OpenMode.DOCUMENT)
-                {                    
+                {    
+                    boolean pwc = showCheckoutDialog();                    
                     XInputStream testStream = null;
                     try 
                     {
-                        testStream = resourceManager.getInputStream();
+                        if(pwc==false)
+                            testStream = resourceManager.getInputStream();
+                        else
+                        {                            
+                            if(resourceManager.getPrivateWorkingCopy())
+                            {
+                                testStream = resourceManager.getInputStream();
+                            }
+                        }
                     }
                     catch (java.io.IOException ex) 
                     {
@@ -417,7 +433,7 @@ public final class CMISContent extends ComponentBase
                                 throw new IllegalArgumentException("Not xoutputstream/xactivedatasink/xactivedatastreamer");
                             }
                         }
-                    }
+                    }                    
                 }
                 else if(openArg.Mode == OpenMode.DOCUMENT_SHARE_DENY_NONE || openArg.Mode == OpenMode.DOCUMENT_SHARE_DENY_WRITE)
                     throw new UnsupportedCommandException();
@@ -646,6 +662,24 @@ public final class CMISContent extends ComponentBase
         return com.sun.star.uno.Any.VOID;
     }
     
+    private boolean showCheckoutDialog() throws com.sun.star.uno.Exception
+    {
+        XMultiComponentFactory xMCF = m_xContext.getServiceManager();
+        Object desktop = xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
+        XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
+        XFrame current_frame = xDesktop.getCurrentFrame();
+        Object dialogProvider = xMCF.createInstanceWithContext("com.sun.star.awt.DialogProvider2", m_xContext);
+        XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
+        XPackageInformationProvider packageInfo = PackageInformationProvider.get(m_xContext);
+        String location = packageInfo.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider");
+        String dialogURL = location+"/dialogs/CheckoutDialog.xdl";
+        CheckoutDialogHandler handler = new CheckoutDialogHandler(m_xContext);
+        XDialog xDialog = xDialogProvider2.createDialogWithHandler(dialogURL,handler);        
+        xDialog.setTitle("Checkout");
+        xDialog.execute();
+        boolean checkout = handler.getButtonPressed();
+        return checkout;
+    }
     private void initializeUCB() throws com.sun.star.uno.Exception
     {
         xmcf = m_xContext.getServiceManager();
