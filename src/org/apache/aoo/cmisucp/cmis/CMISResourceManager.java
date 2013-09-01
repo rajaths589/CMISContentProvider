@@ -44,6 +44,7 @@ import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.ItemIterable;
+import org.apache.chemistry.opencmis.client.api.ObjectId;
 import org.apache.chemistry.opencmis.client.api.ObjectType;
 import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
@@ -73,8 +74,9 @@ public class CMISResourceManager {
     private CMISConnect m_Connect;
     private Document pwc;
     private String pwc_version;
+    private CMISRepoCredentials creds;
     
-    public CMISResourceManager(XComponentContext xContext, CMISConnect connect )
+    public CMISResourceManager( XComponentContext xContext, CMISConnect connect )
     {        
         object = connect.getObject();
         connected = connect.getSession();        
@@ -91,6 +93,12 @@ public class CMISResourceManager {
         m_Connect = null;
         url = mURL;
     }
+    
+    public void setRepoCredentials(CMISRepoCredentials temp)
+    {
+        creds = temp;
+    }
+    
     private void generateFolderorDocument()
     {
         if(isFolder())
@@ -138,7 +146,8 @@ public class CMISResourceManager {
         if(isDocument)     
         {
             if(canCheckOut())
-            {               
+            {   
+                //exception - handling to handle already checkout documents.
                 pwc = (Document) connected.getObject(getDocument().checkOut());                             
                 pwc_version = pwc.getVersionLabel();
                 return true;
@@ -171,12 +180,18 @@ public class CMISResourceManager {
         {
             if(canCheckIn())
             {
+                try{
                 XInputStreamToInputStreamAdapter inputStream = new XInputStreamToInputStreamAdapter(stream);            
                 ContentStream createContentStream = connected.getObjectFactory().createContentStream(getName(), inputStream.available(), getMimeType(), inputStream);
-                documentObject = (Document) pwc.checkIn(isMajor, null,createContentStream,checkinComment);
+                ObjectId id = pwc.checkIn(isMajor, null,createContentStream,checkinComment);
+                documentObject = (Document) connected.getObject(id);              
                 pwc = null;
                 pwc_version = null;
                 return true;
+                }catch(Exception e)
+                {
+                    return false;
+                }
             }
         }
         return false;
@@ -305,7 +320,7 @@ public class CMISResourceManager {
         } else if(PropertyID.equalsIgnoreCase("IsRemoveable")){
             return new Any(Type.BOOLEAN,false);
         } else if(PropertyID.equalsIgnoreCase("IsReadOnly")){
-            return new Any(Type.BOOLEAN,false);
+            return new Any(Type.BOOLEAN,checkReadOnly());
         } else if(PropertyID.equalsIgnoreCase("CasePreservingURL")){
             return new Any(Type.BOOLEAN,true);
         } else if(PropertyID.equalsIgnoreCase("TargetURL")){
@@ -320,7 +335,17 @@ public class CMISResourceManager {
             return null;
         }
     }
-    
+    private boolean checkReadOnly()
+    {
+        if(pwc!=null)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
     public Any[] getPropertiesAsAny(Property[] props)
     {
        Any ret[] = new Any[props.length];
@@ -421,7 +446,7 @@ public class CMISResourceManager {
         else
             return null;
     }
-    
+        
     public DateTime getLastModifiedDate()
     {
         GregorianCalendar cal = object.getLastModificationDate();
@@ -474,7 +499,15 @@ public class CMISResourceManager {
             return false;
         
     }
+    
+    public boolean isCheckedOut()
+    {
+        if(isDocument)
+            return Boolean.parseBoolean(documentObject.getProperty(PropertyIds.IS_VERSION_SERIES_CHECKED_OUT).getValuesAsString());
         
+        return false;
+    }
+    
     public boolean setName(String newName)
     {
         Map<String,String> nameMap = new HashMap<String, String>();
@@ -603,12 +636,14 @@ public class CMISResourceManager {
         {
             if(obj.getName().equals(name))
             {
-                return new CMISResourceManager(m_Context, obj, connected, url+"/"+obj.getName());
+                CMISRepoCredentials childCred = creds.createChildCredentials(name);
+                return CMISResourceCache.getObject(m_Context).getManager(childCred);
             }
         }
         
         return null;
     }
+    
     public void transfer(CMISConnect connect, String newName ) throws IOException, InteractiveBadTransferURLException
     {
         if(isDocument)
@@ -644,7 +679,7 @@ public class CMISResourceManager {
             getDocument().deleteAllVersions();
         if(isFolder)
             getFolder().deleteTree(true, UnfileObject.DELETE, false);            
-    }
+    }        
 }
 
 

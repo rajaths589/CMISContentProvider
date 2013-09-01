@@ -20,8 +20,14 @@
  *************************************************************/
 package org.apache.aoo.cmisucp.unobojects;
 
+import com.sun.star.awt.ActionEvent;
+import com.sun.star.awt.XActionListener;
+import com.sun.star.awt.XButton;
+import com.sun.star.awt.XControlContainer;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XDialogProvider2;
+import com.sun.star.awt.XRadioButton;
+import com.sun.star.awt.XTextComponent;
 import com.sun.star.beans.Property;
 import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyChangeEvent;
@@ -41,6 +47,7 @@ import com.sun.star.io.XActiveDataStreamer;
 import com.sun.star.io.XInputStream;
 import com.sun.star.io.XOutputStream;
 import com.sun.star.io.XStream;
+import com.sun.star.lang.EventObject;
 import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.uno.XComponentContext;
@@ -51,6 +58,7 @@ import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XResultSet;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.task.XInteractionHandler;
+import com.sun.star.text.XTextField;
 import com.sun.star.ucb.Command;
 import com.sun.star.ucb.ContentAction;
 import com.sun.star.ucb.ContentCreationException;
@@ -86,8 +94,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.aoo.cmisucp.CMISConstants;
 import org.apache.aoo.cmisucp.cmis.CMISConnect;
+import org.apache.aoo.cmisucp.cmis.CMISRepoCredentials;
+import org.apache.aoo.cmisucp.cmis.CMISResourceCache;
 import org.apache.aoo.cmisucp.cmis.CMISResourceManager;
-import org.apache.aoo.cmisucp.dialog.CheckoutDialogHandler;
 import org.apache.aoo.cmisucp.helper.CheckinCommandArgument;
 import org.apache.aoo.cmisucp.helper.ContentPropertySet;
 import org.apache.aoo.cmisucp.helper.PropertyAndValueSet;
@@ -185,11 +194,13 @@ public final class CMISContent extends ComponentBase
     //My method
     public void processIdentifier(String uri) throws ContentCreationException, NotConnectedException, IOException {                
         try
-        {            
-            aConnect = new CMISConnect(m_xContext, uri, "rajaths589", "*****");
-            connected_session = aConnect.getSession();
-            cmisContent = aConnect.getObject();
-            resourceManager = new CMISResourceManager(m_xContext, aConnect);
+        {     
+            CMISRepoCredentials cred = new CMISRepoCredentials(uri, "rajaths589", "******");            
+            //aConnect = new CMISConnect(m_xContext, uri, "rajaths589", "*****");
+            //connected_session = aConnect.getSession();
+            //cmisContent = aConnect.getObject();
+            CMISResourceCache resCache = CMISResourceCache.getObject(m_xContext);
+            resourceManager = resCache.getManager(cred);            
         }
         catch(CmisBaseException e)
         {
@@ -305,6 +316,7 @@ public final class CMISContent extends ComponentBase
         return 0;        
     }
 
+    @SuppressWarnings("empty-statement")
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
         XInteractionHandler xInteractionHandler;
         if(Environment!=null) 
@@ -430,7 +442,7 @@ public final class CMISContent extends ComponentBase
                             }
                             else
                             {
-                                throw new IllegalArgumentException("Not xoutputstream/xactivedatasink/xactivedatastreamer");
+                                throw new IllegalArgumentException("Not XOutputStream/XActiveDataSink/XActiveDataStreamer");
                             }
                         }
                     }                    
@@ -485,43 +497,16 @@ public final class CMISContent extends ComponentBase
             TransferInfo aTransInfo;
             try
             {
-                aTransInfo = (TransferInfo) AnyConverter.toObject(TransferInfo.class, aCommand.Argument);            
+                aTransInfo = (TransferInfo) AnyConverter.toObject(TransferInfo.class, aCommand.Argument);                            
             }
             catch(Exception e)
             {
                 throw new IllegalArgumentException("Incompatible Transfer Argumnet");
-            }
-            /*
-            CMISConnect transferConnect;
-            try
-            {
-                transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
-            }
-            catch(CmisBaseException e)
-            {
-                throw new IllegalArgumentException("Wrong repository data. Probably username,password/soruceURL is wrong");
-            }
- 
-            //Name Clash not implemented.
-            try 
-            {
-                if(aTransInfo.NewTitle!=null)
-                    resourceManager.transfer(transferConnect, aTransInfo.NewTitle);
-                else
-                    resourceManager.transfer(transferConnect,transferConnect.getObject().getName());
-            }    
-            catch (java.io.IOException ex) 
-            {
-                throw new IllegalArgumentException();
-            }
-            if(aTransInfo.MoveData==true)
-            {                
-                CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect.getObject(), transferConnect.getSession());
-                transferRes.delete();
-            }*/
-            
-            if(aTransInfo.SourceURL.startsWith("cmis")||aTransInfo.SourceURL.startsWith("cmiss"))
-            {
+            }            
+            log.fine("just like that");
+            try {
+                transferDocument(aTransInfo, Environment);
+                /*
                 CMISConnect transferConnect;
                 try
                 {
@@ -546,87 +531,120 @@ public final class CMISContent extends ComponentBase
                 }
                 if(aTransInfo.MoveData==true)
                 {                
-                    CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect);
+                    CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect.getObject(), transferConnect.getSession());
                     transferRes.delete();
-                }
-            }
-            else
-            {
-                XContentIdentifier xTempTransfer;
-                if(ucbInitialized)
-                    xTempTransfer = xContentIdentifierFactory.createContentIdentifier(aTransInfo.SourceURL);
-                else
+                }*/
+                /*
+                if(aTransInfo.SourceURL.startsWith("cmis")||aTransInfo.SourceURL.startsWith("cmiss"))
                 {
-                    initializeUCB();
-                    xTempTransfer = xContentIdentifierFactory.createContentIdentifier(aTransInfo.SourceURL);
-                }
-                
-                XContent transferContent = xContentProvider.queryContent(xTempTransfer);
-                if(transferContent!=null)
-                {
-                    XCommandProcessor xCP = UnoRuntime.queryInterface(XCommandProcessor.class, transferContent);
-                    Command isTransFolder = new Command();
-                    isTransFolder.Name = "getPropertyValues";
-                    isTransFolder.Handle = -1;
-                    
-                    Property parr[] = new Property[1];
-                    Property pFolder = new Property();
-                    pFolder.Name = "isFolder";
-                    pFolder.Handle = -1;
-                    pFolder.Type = Type.BOOLEAN;
-                    pFolder.Attributes = PropertyAttribute.READONLY;
-                    parr[0] = pFolder;
-                    isTransFolder.Argument = parr;
-                                        
-                    if(!(((XRow)AnyConverter.toObject(XRow.class,xCP.execute(isTransFolder, -1, Environment))).getBoolean(1)))
+                    CMISConnect transferConnect;
+                    try
+                    {
+                        transferConnect = new CMISConnect(m_xContext,aTransInfo.SourceURL, "rajaths589", "*****");
+                    }
+                    catch(CmisBaseException e)
+                    {
+                        throw new IllegalArgumentException("Wrong repository data. Probably username,password/soruceURL is wrong");
+                    }
+     
+                    //Name Clash not implemented.
+                    try 
                     {
                         if(aTransInfo.NewTitle!=null)
-                        {
-                            XActiveDataSink xActiveDataSink = new CMISActiveDataSink(m_xContext);
-                            Command openDoc = new Command();
-                            openDoc.Name = "open";
-                            openDoc.Handle = -1;
-                            OpenCommandArgument2 tempOpen = new OpenCommandArgument2();
-                            tempOpen.Mode = OpenMode.DOCUMENT;
-                            tempOpen.Sink = new Any(new Type(XActiveDataSink.class),xActiveDataSink);
-                            openDoc.Argument = tempOpen;
-                            xCP.execute(openDoc, -1, Environment);
-                            String mimetype;
-                            Command mimeType = new Command();
-                            mimeType.Name = "getPropertyValues";
-                            Property p[] = new Property[1];
-                            Property pMime = new Property();
-                            pMime.Name = "MediaType";
-                            pMime.Handle = -1;
-                            pMime.Attributes = PropertyAttribute.READONLY;
-                            pMime.Type = Type.STRING;
-                            p[0] = pMime;
-                            mimeType.Handle = -1;
-                            mimeType.Argument = p;
-                            mimetype = UnoRuntime.queryInterface(XRow.class, xCP.execute(mimeType, -1, Environment)).getString(1);
-                            try 
-                            {
-                                resourceManager.createDocument(xActiveDataSink.getInputStream(), aTransInfo.NewTitle, mimetype);
-                            }
-                            catch (java.io.IOException ex) 
-                            {
-                                Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            if(aTransInfo.MoveData)
-                            {
-                                Command del = new Command();
-                                del.Name = "delete";
-                                del.Handle = -1;
-                                xCP.execute(del, -1, null);
-                            }
-                        }
+                            resourceManager.transfer(transferConnect, aTransInfo.NewTitle);
                         else
-                        {
-                            // Move folder
-                            
-                        }
+                            resourceManager.transfer(transferConnect,transferConnect.getObject().getName());
+                    }    
+                    catch (java.io.IOException ex) 
+                    {
+                        throw new IllegalArgumentException();
+                    }
+                    if(aTransInfo.MoveData==true)
+                    {                
+                        CMISResourceManager transferRes = new CMISResourceManager(m_xContext, transferConnect);
+                        transferRes.delete();
                     }
                 }
+                else
+                {
+                    XContentIdentifier xTempTransfer;
+                    if(ucbInitialized)
+                        xTempTransfer = xContentIdentifierFactory.createContentIdentifier(aTransInfo.SourceURL);
+                    else
+                    {
+                        initializeUCB();
+                        xTempTransfer = xContentIdentifierFactory.createContentIdentifier(aTransInfo.SourceURL);
+                    }
+                    
+                    XContent transferContent = xContentProvider.queryContent(xTempTransfer);
+                    if(transferContent!=null)
+                    {
+                        XCommandProcessor xCP = UnoRuntime.queryInterface(XCommandProcessor.class, transferContent);
+                        Command isTransFolder = new Command();
+                        isTransFolder.Name = "getPropertyValues";
+                        isTransFolder.Handle = -1;
+                        
+                        Property parr[] = new Property[1];
+                        Property pFolder = new Property();
+                        pFolder.Name = "isFolder";
+                        pFolder.Handle = -1;
+                        pFolder.Type = Type.BOOLEAN;
+                        pFolder.Attributes = PropertyAttribute.READONLY;
+                        parr[0] = pFolder;
+                        isTransFolder.Argument = parr;
+                                            
+                        if(!(((XRow)AnyConverter.toObject(XRow.class,xCP.execute(isTransFolder, -1, Environment))).getBoolean(1)))
+                        {
+                            if(aTransInfo.NewTitle!=null) 
+                            {
+                                XActiveDataSink xActiveDataSink = new CMISActiveDataSink(m_xContext);
+                                Command openDoc = new Command();
+                                openDoc.Name = "open";
+                                openDoc.Handle = -1;
+                                OpenCommandArgument2 tempOpen = new OpenCommandArgument2();
+                                tempOpen.Mode = OpenMode.DOCUMENT;
+                                tempOpen.Sink = new Any(new Type(XActiveDataSink.class),xActiveDataSink);
+                                openDoc.Argument = tempOpen;
+                                xCP.execute(openDoc, -1, Environment);
+                                String mimetype;
+                                Command mimeType = new Command();
+                                mimeType.Name = "getPropertyValues";
+                                Property p[] = new Property[1];
+                                Property pMime = new Property();
+                                pMime.Name = "MediaType";
+                                pMime.Handle = -1;
+                                pMime.Attributes = PropertyAttribute.READONLY;
+                                pMime.Type = Type.STRING;
+                                p[0] = pMime;
+                                mimeType.Handle = -1;
+                                mimeType.Argument = p;
+                                mimetype = UnoRuntime.queryInterface(XRow.class, xCP.execute(mimeType, -1, Environment)).getString(1);
+                                try 
+                                {
+                                    resourceManager.createDocument(xActiveDataSink.getInputStream(), aTransInfo.NewTitle, mimetype);
+                                }
+                                catch (java.io.IOException ex) 
+                                {
+                                    Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
+                                }
+                                if(aTransInfo.MoveData)
+                                {
+                                    Command del = new Command();
+                                    del.Name = "delete";
+                                    del.Handle = -1;
+                                    xCP.execute(del, -1, null);
+                                }
+                            }
+                            else 
+                            {
+                                // Move folder
+                                
+                            }
+                        }
+                    }
+                }*/
+            } catch (java.io.IOException ex) {
+                Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
             }
             
         }
@@ -662,6 +680,78 @@ public final class CMISContent extends ComponentBase
         return com.sun.star.uno.Any.VOID;
     }
     
+    private boolean transferDocument(TransferInfo trans, XCommandEnvironment xCmdEnv) throws com.sun.star.uno.Exception, java.io.IOException
+    {        
+        initializeUCB();
+        if(resourceManager.isFolder)
+        {
+            //String sourceURL = trans.SourceURL;
+            XContentIdentifier sourceIdentifier = xContentIdentifierFactory.createContentIdentifier(trans.SourceURL);
+            XContent transContent = xContentProvider.queryContent(sourceIdentifier);
+            XCommandProcessor  xCmdProcessor = UnoRuntime.queryInterface(XCommandProcessor.class, transContent);
+            Command title = new Command();
+            title.Name = "getPropertyValues";
+            Property nameProp[] = new Property[2];
+            nameProp[0] = new Property();
+            nameProp[0].Name = "Title";
+            nameProp[0].Handle = -1;
+            nameProp[1] = new Property();
+            nameProp[1].Name = "MediaType";
+            nameProp[1].Handle = -1;
+            title.Argument = nameProp;
+            XRow name = UnoRuntime.queryInterface(XRow.class,xCmdProcessor.execute(title, -1, xCmdEnv));
+            Command open = new Command();
+            open.Name = "open";
+            open.Handle = -1;
+            OpenCommandArgument2 openArg = new OpenCommandArgument2();
+            openArg.Mode = OpenMode.DOCUMENT;
+            XActiveDataSink dataSink = new CMISActiveDataSink(m_xContext);
+            openArg.Sink = dataSink;
+            open.Argument = openArg;
+            xCmdProcessor.execute(open, -1, xCmdEnv);            
+            CMISResourceManager childTempManager = resourceManager.getChild(trans.NewTitle);
+            if(childTempManager!=null)
+            {
+                XPackageInformationProvider infoProvider = PackageInformationProvider.get(m_xContext);                
+                String xdlLoc = infoProvider.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider")+"/dialogs/CheckinDialog.xdl";
+                XMultiComponentFactory xMCF = m_xContext.getServiceManager();
+                Object dialogProvider = xMCF.createInstanceWithContext("com.sun.star.awt.DialogProvider2", m_xContext);
+                XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
+                Object desktop = xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
+                XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
+                XFrame current_frame = xDesktop.getCurrentFrame();
+                XDialog checkinDialog = xDialogProvider2.createDialog(xdlLoc);
+                XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, checkinDialog);
+                XTextComponent checkinComment = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField1"));
+                XButton checkinBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton1"));
+                XButton cancelCheckout = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton2"));
+                XButton cancelBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton3"));                
+                XRadioButton isMajorBtn = UnoRuntime.queryInterface(XRadioButton.class, xControlContainer.getControl("OptionButton1"));
+                checkinBtn.setActionCommand("checkin");
+                cancelCheckout.setActionCommand("cancel checkout");
+                cancelBtn.setActionCommand("cancel");
+                BtnActionListener checkinListenr = new BtnActionListener(checkinDialog);
+                checkinBtn.addActionListener(checkinListenr);
+                cancelCheckout.addActionListener(checkinListenr);
+                cancelBtn.addActionListener(checkinListenr);
+                checkinDialog.execute();
+                if(checkinListenr.getAccepted())
+                {
+                    boolean isMajor = isMajorBtn.getState();
+                    String comment = checkinComment.getText();
+                    childTempManager.checkIn(isMajor, dataSink.getInputStream(), comment);
+                    return true;
+                }
+                if(checkinListenr.getCancelCheckout())
+                {
+                    childTempManager.cancelCheckOut();
+                    return true;
+                }
+            }   
+        }
+        return false;
+    }
+    
     private boolean showCheckoutDialog() throws com.sun.star.uno.Exception
     {
         XMultiComponentFactory xMCF = m_xContext.getServiceManager();
@@ -672,13 +762,24 @@ public final class CMISContent extends ComponentBase
         XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
         XPackageInformationProvider packageInfo = PackageInformationProvider.get(m_xContext);
         String location = packageInfo.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider");
-        String dialogURL = location+"/dialogs/CheckoutDialog.xdl";
-        CheckoutDialogHandler handler = new CheckoutDialogHandler(m_xContext);
-        XDialog xDialog = xDialogProvider2.createDialogWithHandler(dialogURL,handler);        
-        xDialog.setTitle("Checkout");
+        String dialogURL = location+"/dialogs/CheckoutDialog.xdl";        
+        XDialog xDialog = xDialogProvider2.createDialog(dialogURL);        
+        XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, xDialog);
+        XButton yesButton = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton1"));
+        XButton cancelButton = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton2"));
+        BtnActionListener btnActn = new BtnActionListener(xDialog);
+        yesButton.setActionCommand("yes");
+        cancelButton.setActionCommand("cancel");
+        yesButton.addActionListener(btnActn);
+        cancelButton.addActionListener(btnActn);        
+        xDialog.setTitle("Checkout");                
         xDialog.execute();
-        boolean checkout = handler.getButtonPressed();
+        boolean checkout = btnActn.getAccepted();        
         return checkout;
+    }
+    private void setupDialogControls()
+    {
+        
     }
     private void initializeUCB() throws com.sun.star.uno.Exception
     {
@@ -1162,5 +1263,50 @@ private Any getPropertyValues(Property[] request)
     {
         // TODO: Insert your implementation for "removeProperty" here.
     }
-
+    
+    public class BtnActionListener implements XActionListener
+    {       
+        private boolean accepted;       
+        private XDialog m_xDialog;
+        private boolean cancelCheckout = false;
+        public BtnActionListener(XDialog xDialog)
+        {
+            m_xDialog = xDialog;            
+        }
+        public void actionPerformed(ActionEvent arg0) {
+            if(arg0.ActionCommand.equalsIgnoreCase("yes"))
+            {     
+                accepted = true;
+                m_xDialog.endExecute();
+            }
+            else if(arg0.ActionCommand.equalsIgnoreCase("cancel"))
+            {             
+                accepted = false;
+                m_xDialog.endExecute();
+            }
+            else if(arg0.ActionCommand.equalsIgnoreCase("checkin"))
+            {
+                accepted = true;
+                m_xDialog.endExecute();
+            }
+            else if(arg0.ActionCommand.equalsIgnoreCase("cancel checkout"))
+            {
+                accepted = false;
+                cancelCheckout = true;
+                m_xDialog.endExecute();
+            }            
+        }
+        public boolean getAccepted()
+        {
+            return accepted;
+        }
+        public boolean getCancelCheckout()
+        {
+            return cancelCheckout;                   
+        }
+        public void disposing(EventObject arg0) {
+            m_xDialog = null;
+        }
+        
+    }
 }

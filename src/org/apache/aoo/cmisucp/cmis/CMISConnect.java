@@ -93,7 +93,8 @@ public class CMISConnect {
         content = ob;
         connected_session = s;       
     }
-    public CMISConnect(XComponentContext xComponentContext, String uri, String user, String pwd )
+    
+    public CMISConnect( XComponentContext xComponentContext, String uri, String user, String pwd )
     {
         m_Context = xComponentContext;
         username = user;
@@ -175,6 +176,10 @@ public class CMISConnect {
         nameObj = URI.substring(lastSlash+1);
         parentURL = URI.substring(0, lastSlash);
         parentURL = parentURL.replaceFirst("http", "cmis");
+        if(localpath.equals("/.")||localpath.equals("."))
+        {
+            localpath = "/";
+        }
        /* if(parentURL.equals(repositoryURL))
         {
             parentURL = parentURL+"/";
