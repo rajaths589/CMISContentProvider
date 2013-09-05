@@ -37,6 +37,8 @@ import com.sun.star.beans.XPropertiesChangeListener;
 import com.sun.star.beans.XPropertySetInfo;
 import com.sun.star.deployment.PackageInformationProvider;
 import com.sun.star.deployment.XPackageInformationProvider;
+import com.sun.star.frame.FrameSearchFlag;
+import com.sun.star.frame.XComponentLoader;
 import com.sun.star.frame.XDesktop;
 import com.sun.star.frame.XFrame;
 import com.sun.star.io.BufferSizeExceededException;
@@ -58,7 +60,6 @@ import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XResultSet;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.task.XInteractionHandler;
-import com.sun.star.text.XTextField;
 import com.sun.star.ucb.Command;
 import com.sun.star.ucb.ContentAction;
 import com.sun.star.ucb.ContentCreationException;
@@ -679,6 +680,22 @@ public final class CMISContent extends ComponentBase
         }        
         return com.sun.star.uno.Any.VOID;
     }
+    private void loadDocumentReadOnly(CMISResourceManager manager) throws com.sun.star.uno.Exception
+    {
+        XMultiComponentFactory xMCF = m_xContext.getServiceManager();
+        Object desktop = xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
+        XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
+        XFrame current_frame = xDesktop.getCurrentFrame();
+        XComponentLoader xComponentLoader = (XComponentLoader)UnoRuntime.queryInterface(XComponentLoader.class, desktop);                
+        try
+        {
+            xComponentLoader.loadComponentFromURL(manager.getCompleteURL(),current_frame.getName(), FrameSearchFlag.ALL, new PropertyValue[0]);
+        }
+        catch(Exception e)
+        {
+            log.info("what the hell is this");
+        }
+    }
     
     private boolean transferDocument(TransferInfo trans, XCommandEnvironment xCmdEnv) throws com.sun.star.uno.Exception, java.io.IOException
     {        
@@ -740,6 +757,7 @@ public final class CMISContent extends ComponentBase
                     boolean isMajor = isMajorBtn.getState();
                     String comment = checkinComment.getText();
                     childTempManager.checkIn(isMajor, dataSink.getInputStream(), comment);
+                    loadDocumentReadOnly(childTempManager);
                     return true;
                 }
                 if(checkinListenr.getCancelCheckout())

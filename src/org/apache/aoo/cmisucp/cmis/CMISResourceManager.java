@@ -98,6 +98,7 @@ public class CMISResourceManager {
     {
         creds = temp;
     }
+        
     
     private void generateFolderorDocument()
     {
@@ -156,6 +157,10 @@ public class CMISResourceManager {
         return false;
     }
 
+    public String getCompleteURL()
+    {
+        return creds.URL;
+    }
     public String getLatestVersion()
     {
         return getDocument().getObjectOfLatestVersion(false).getVersionLabel();
