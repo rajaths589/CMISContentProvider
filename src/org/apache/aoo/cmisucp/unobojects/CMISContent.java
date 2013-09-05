@@ -407,6 +407,10 @@ public final class CMISContent extends ComponentBase
                             {
                                 testStream = resourceManager.getInputStream();
                             }
+                            else
+                            {
+                                testStream = resourceManager.getInputStream();
+                            }
                         }
                     }
                     catch (java.io.IOException ex) 
@@ -689,7 +693,12 @@ public final class CMISContent extends ComponentBase
         XComponentLoader xComponentLoader = (XComponentLoader)UnoRuntime.queryInterface(XComponentLoader.class, desktop);                
         try
         {
-            xComponentLoader.loadComponentFromURL(manager.getCompleteURL(),current_frame.getName(), FrameSearchFlag.ALL, new PropertyValue[0]);
+            PropertyValue pv[] = new PropertyValue[1];
+            pv[0] = new PropertyValue();
+            pv[0].Name = "ReadOnly";
+            pv[0].Value = new Any(Type.BOOLEAN,true);
+            pv[0].Handle = -1;
+            xComponentLoader.loadComponentFromURL(manager.getCompleteURL(),current_frame.getName(), FrameSearchFlag.ALL, pv);
         }
         catch(Exception e)
         {

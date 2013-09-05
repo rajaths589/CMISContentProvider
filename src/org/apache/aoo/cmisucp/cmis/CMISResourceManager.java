@@ -83,6 +83,8 @@ public class CMISResourceManager {
         generateFolderorDocument();    
         m_Connect = connect;
         url = connect.getURL();
+        initializePWC();
+        
     }
     
     public CMISResourceManager(XComponentContext xContext, CmisObject obj, Session s, String mURL)
@@ -92,8 +94,17 @@ public class CMISResourceManager {
         generateFolderorDocument();
         m_Connect = null;
         url = mURL;
+        initializePWC();
     }
     
+    private void initializePWC()
+    {
+        if(isCheckedOut())
+        {
+            String pwcid = documentObject.getVersionSeriesCheckedOutId();
+            pwc = (Document) connected.getObject(pwcid);
+        }
+    }
     public void setRepoCredentials(CMISRepoCredentials temp)
     {
         creds = temp;
@@ -341,7 +352,7 @@ public class CMISResourceManager {
         }
     }
     private boolean checkReadOnly()
-    {
+    {        
         if(pwc!=null)
         {
             return false;
@@ -508,7 +519,7 @@ public class CMISResourceManager {
     public boolean isCheckedOut()
     {
         if(isDocument)
-            return Boolean.parseBoolean(documentObject.getProperty(PropertyIds.IS_VERSION_SERIES_CHECKED_OUT).getValuesAsString());
+            return documentObject.isVersionSeriesCheckedOut();
         
         return false;
     }
