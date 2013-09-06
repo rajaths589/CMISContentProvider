@@ -2,6 +2,7 @@ package org.apache.aoo.cmisucp.dialog;
 
 import com.sun.star.awt.ActionEvent;
 import com.sun.star.awt.MessageBoxButtons;
+import com.sun.star.awt.MessageBoxResults;
 import com.sun.star.awt.MessageBoxType;
 import com.sun.star.awt.Rectangle;
 import com.sun.star.awt.XActionListener;
@@ -159,9 +160,8 @@ public final class OptionsPageDialogHandler extends WeakBase
 
         short n = 0;
         for (UrlRecord u : xPass.getAllPersistent(xHandler)) {
-            if(u.Url.startsWith("cmis"))
-            {
-                urlList.addItem(u.Url, n);            
+            if (u.Url.startsWith("cmis")) {
+                urlList.addItem(u.Url, n);
                 usernameList.addItem(u.UserList[0].UserName, n);
                 n++;
             }
@@ -175,9 +175,8 @@ public final class OptionsPageDialogHandler extends WeakBase
         short n = 0;
 
         for (UrlRecord u : xPass.getAllPersistent(xHandler)) {
-           if(u.Url.startsWith("cmis"))
-            {
-                urlList.addItem(u.Url, n);            
+            if (u.Url.startsWith("cmis")) {
+                urlList.addItem(u.Url, n);
                 usernameList.addItem(u.UserList[0].UserName, n);
                 n++;
             }
@@ -228,37 +227,69 @@ public final class OptionsPageDialogHandler extends WeakBase
         xDialog.execute();
         if (addDialogListener.getAccepted()) {
             String url = urlfield.getText();
-            if(url.startsWith("cmis"))
-            {
-                String username = userNamefield.getText();            
+            if (url.startsWith("cmis")) {
+                String username = userNamefield.getText();
                 String password = passwordfield.getText();
-                xPass.addPersistent(url, username, new String[]{password}, xHandler);
-                refreshTable();
-            }
-            else
-            {   
-                XComponent xMessageComponent = null;
-                try
-                {
-                    Object oToolkit = xMCF.createInstanceWithContext("com.sun.star.awt.Toolkit", m_xContext);                
-                    XMessageBoxFactory xMessageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, oToolkit);
-                    Rectangle aRectangle = new Rectangle();
-                    XControl windowControl = UnoRuntime.queryInterface(XControl.class, m_xWindow);
-                    XMessageBox xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.ERRORBOX, MessageBoxButtons.BUTTONS_OK, "Error", "Add only CMIS URL");
-                    xMessageComponent = UnoRuntime.queryInterface(XComponent.class, xMessage);
-                    if(xMessage!=null)
-                        xMessage.execute();
+                UrlRecord urlRec = xPass.find(url, xHandler);
+                if (urlRec.Url.equals(url)) {
+                    showErrorMessage("Error", "Only one username and password per person");
+                    addItem();
+                } else if (urlRec.Url.equals("")) {
+                    xPass.addPersistent(url, username, new String[]{password}, xHandler);
+                    refreshTable();
+                } else {
+                    XComponent xMessageComponent = null;
+                    try {
+                        Object oToolkit = xMCF.createInstanceWithContext("com.sun.star.awt.Toolkit", m_xContext);
+                        XMessageBoxFactory xMessageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, oToolkit);
+                        Rectangle aRectangle = new Rectangle();
+                        XControl windowControl = UnoRuntime.queryInterface(XControl.class, m_xWindow);
+                        XMessageBox xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: "+urlRec.Url+" found. Still add?");
+                        xMessageComponent = UnoRuntime.queryInterface(XComponent.class, xMessage);
+                        if (xMessage != null) {
+                            short res = xMessage.execute();
+                            if(res == MessageBoxResults.YES)
+                            {
+                                xPass.addPersistent(url, username, new String[]{password}, xHandler);
+                                refreshTable();
+                            }
+                            else
+                            {
+                                addItem();
+                            }
+                        }
+                    } catch (com.sun.star.uno.Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (xMessageComponent != null) {
+                            xMessageComponent.dispose();
+                        }
+                    }                    
                 }
-                catch(com.sun.star.uno.Exception e)
-                {
-                    e.printStackTrace();
-                }
-                finally
-                {
-                    if(xMessageComponent!=null)
-                        xMessageComponent.dispose();
-                }
+            } else {
+                showErrorMessage("Error", "Add only cmis url");
                 addItem();
+            }
+        }
+    }
+
+    private void showErrorMessage(String title, String Message) {
+        XComponent xMessageComponent = null;
+        try {
+            Object oToolkit = xMCF.createInstanceWithContext("com.sun.star.awt.Toolkit", m_xContext);
+            XMessageBoxFactory xMessageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, oToolkit);
+            Rectangle aRectangle = new Rectangle();
+            XControl windowControl = UnoRuntime.queryInterface(XControl.class, m_xWindow);
+            XMessageBox xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.ERRORBOX, MessageBoxButtons.BUTTONS_OK, title, Message);
+            xMessageComponent = UnoRuntime.queryInterface(XComponent.class, xMessage);
+            if (xMessage != null) {
+                xMessage.execute();
+            }
+        } catch (com.sun.star.uno.Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (xMessageComponent != null) {
+                xMessageComponent.dispose();
             }
         }
     }
