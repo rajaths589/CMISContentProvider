@@ -61,6 +61,7 @@ import com.sun.star.sdbc.XResultSet;
 import com.sun.star.sdbc.XRow;
 import com.sun.star.task.XInteractionHandler;
 import com.sun.star.ucb.Command;
+import com.sun.star.ucb.CommandFailedException;
 import com.sun.star.ucb.ContentAction;
 import com.sun.star.ucb.ContentCreationException;
 import com.sun.star.ucb.ContentEvent;
@@ -316,8 +317,7 @@ public final class CMISContent extends ComponentBase
     public int createCommandIdentifier() {        
         return 0;        
     }
-
-    @SuppressWarnings("empty-statement")
+    
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
         XInteractionHandler xInteractionHandler;
         if(Environment!=null) 
@@ -394,8 +394,12 @@ public final class CMISContent extends ComponentBase
             else
             {
                 if(openArg.Mode == OpenMode.DOCUMENT)
-                {    
-                    boolean pwc = showCheckoutDialog();                    
+                {        
+                    boolean pwc = false;
+                    if(resourceManager.versionable && resourceManager.canCheckOut())
+                    {
+                        pwc = showCheckoutDialog();                    
+                    }
                     XInputStream testStream = null;
                     try 
                     {
@@ -735,46 +739,73 @@ public final class CMISContent extends ComponentBase
             openArg.Sink = dataSink;
             open.Argument = openArg;
             xCmdProcessor.execute(open, -1, xCmdEnv);            
-            CMISResourceManager childTempManager = resourceManager.getChild(trans.NewTitle);
+            CMISResourceManager childTempManager = resourceManager.getChild(trans.NewTitle);            
             if(childTempManager!=null)
             {
-                XPackageInformationProvider infoProvider = PackageInformationProvider.get(m_xContext);                
-                String xdlLoc = infoProvider.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider")+"/dialogs/CheckinDialog.xdl";
-                XMultiComponentFactory xMCF = m_xContext.getServiceManager();
-                Object dialogProvider = xMCF.createInstanceWithContext("com.sun.star.awt.DialogProvider2", m_xContext);
-                XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
-                Object desktop = xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
-                XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
-                XFrame current_frame = xDesktop.getCurrentFrame();
-                XDialog checkinDialog = xDialogProvider2.createDialog(xdlLoc);
-                XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, checkinDialog);
-                XTextComponent checkinComment = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField1"));
-                XButton checkinBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton1"));
-                XButton cancelCheckout = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton2"));
-                XButton cancelBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton3"));                
-                XRadioButton isMajorBtn = UnoRuntime.queryInterface(XRadioButton.class, xControlContainer.getControl("OptionButton1"));
-                checkinBtn.setActionCommand("checkin");
-                cancelCheckout.setActionCommand("cancel checkout");
-                cancelBtn.setActionCommand("cancel");
-                BtnActionListener checkinListenr = new BtnActionListener(checkinDialog);
-                checkinBtn.addActionListener(checkinListenr);
-                cancelCheckout.addActionListener(checkinListenr);
-                cancelBtn.addActionListener(checkinListenr);
-                checkinDialog.execute();
-                if(checkinListenr.getAccepted())
-                {
-                    boolean isMajor = isMajorBtn.getState();
-                    String comment = checkinComment.getText();
-                    childTempManager.checkIn(isMajor, dataSink.getInputStream(), comment);
-                    loadDocumentReadOnly(childTempManager);
-                    return true;
+                if(childTempManager.versionable)
+                {                    
+                    if(childTempManager.isCheckedOut())
+                    {                                            
+                        XPackageInformationProvider infoProvider = PackageInformationProvider.get(m_xContext);                             
+                        String xdlLoc = infoProvider.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider")+"/dialogs/CheckinDialog.xdl";
+                        XMultiComponentFactory xMCF = m_xContext.getServiceManager();
+                        Object dialogProvider = xMCF.createInstanceWithContext("com.sun.star.awt.DialogProvider2", m_xContext);
+                        XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
+                        Object desktop = xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
+                        XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
+                        XFrame current_frame = xDesktop.getCurrentFrame();
+                        XDialog checkinDialog = xDialogProvider2.createDialog(xdlLoc);
+                        XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, checkinDialog);
+                        XTextComponent checkinComment = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField1"));
+                        XButton checkinBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton1"));
+                        XButton cancelCheckout = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton2"));
+                        XButton cancelBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton3"));                
+                        XRadioButton isMajorBtn = UnoRuntime.queryInterface(XRadioButton.class, xControlContainer.getControl("OptionButton1"));
+                        checkinBtn.setActionCommand("checkin");
+                        cancelCheckout.setActionCommand("cancel checkout");
+                        cancelBtn.setActionCommand("cancel");
+                        BtnActionListener checkinListenr = new BtnActionListener(checkinDialog);
+                        checkinBtn.addActionListener(checkinListenr);
+                        cancelCheckout.addActionListener(checkinListenr);
+                        cancelBtn.addActionListener(checkinListenr);
+                        checkinDialog.execute();
+                        if(checkinListenr.getAccepted())
+                        {
+                            boolean isMajor = isMajorBtn.getState();
+                            String comment = checkinComment.getText();
+                            childTempManager.checkIn(isMajor, dataSink.getInputStream(), comment);
+                            loadDocumentReadOnly(childTempManager);
+                            return true;
+                        }
+                        if(checkinListenr.getCancelCheckout())
+                        {
+                            childTempManager.cancelCheckOut();
+                            // more - code to do
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        if(childTempManager.canSetContentStream())
+                        {
+                            childTempManager.setInputStream(dataSink.getInputStream());
+                            return true;
+                        }
+                    }
                 }
-                if(checkinListenr.getCancelCheckout())
+                else
                 {
-                    childTempManager.cancelCheckOut();
-                    return true;
+                    if(childTempManager.canSetContentStream())
+                    {
+                        childTempManager.setInputStream(dataSink.getInputStream());
+                        return true;
+                    }
+                    else
+                    {
+                        throw new CommandFailedException("Read-only object");
+                    }
                 }
-            }   
+            }
         }
         return false;
     }

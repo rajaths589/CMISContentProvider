@@ -21,6 +21,7 @@
 package org.apache.aoo.cmisucp.cmis;
 
 import com.sun.star.beans.Property;
+import com.sun.star.io.BufferSizeExceededException;
 import com.sun.star.io.NotConnectedException;
 import com.sun.star.io.XInputStream;
 import com.sun.star.lib.uno.adapter.ByteArrayToXInputStreamAdapter;
@@ -30,6 +31,7 @@ import com.sun.star.uno.Any;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.util.DateTime;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -42,6 +44,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
+import org.apache.chemistry.opencmis.client.api.DocumentType;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.ItemIterable;
 import org.apache.chemistry.opencmis.client.api.ObjectId;
@@ -52,6 +55,7 @@ import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.enums.Action;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
+import org.apache.chemistry.opencmis.commons.enums.CapabilityContentStreamUpdates;
 import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
@@ -75,6 +79,7 @@ public class CMISResourceManager {
     private Document pwc;
     private String pwc_version;
     private CMISRepoCredentials creds;
+    public boolean versionable;
     
     public CMISResourceManager( XComponentContext xContext, CMISConnect connect )
     {        
@@ -126,9 +131,26 @@ public class CMISResourceManager {
             documentObject = (Document)object;
             isDocument = true;
             isFolder = false;
+            setIsVersionable();
         }
     }
     
+    public boolean canSetContentStream()
+    {
+        if(isDocument)
+        {
+            if(connected.getRepositoryInfo().getCapabilities().getContentStreamUpdatesCapability()== CapabilityContentStreamUpdates.ANYTIME)
+                return true;
+        }
+        return false;
+    }
+    private void setIsVersionable()
+    {
+        if(isDocument)
+        {
+            versionable = ((DocumentType)(getDocument().getType())).isVersionable();
+        }
+    }
     public boolean exists()
     {
         if(object==null)        
@@ -158,8 +180,7 @@ public class CMISResourceManager {
         if(isDocument)     
         {
             if(canCheckOut())
-            {   
-                //exception - handling to handle already checkout documents.
+            {                   
                 pwc = (Document) connected.getObject(getDocument().checkOut());                             
                 pwc_version = pwc.getVersionLabel();
                 return true;
@@ -352,14 +373,21 @@ public class CMISResourceManager {
         }
     }
     private boolean checkReadOnly()
-    {        
-        if(pwc!=null)
+    {    //this condition is not always true..       
+        //if(pwc!=null||canSetContentStream())
+        if(versionable)
         {
-            return false;
+            if(pwc!=null)
+                return false;
+            else
+                return true;
         }
         else
         {
-            return true;
+            if(canSetContentStream())
+                return false;
+            else
+                return true;
         }
     }
     public Any[] getPropertiesAsAny(Property[] props)
@@ -481,8 +509,16 @@ public class CMISResourceManager {
     public XInputStream getInputStream() throws IOException, NotConnectedException, com.sun.star.io.IOException
     {
         if(isDocument)
-        {                           
-            InputStream inp = getDocument().getContentStream().getStream();
+        {    
+            InputStream inp = null;
+            try
+            {
+                inp = getDocument().getContentStream().getStream();
+            }
+            catch(Exception e)
+            {
+                log.info("error");
+            }
             int length = inp.available();
             byte arr[][] = new byte[1][];
             byte bytes[] = new byte[length];
@@ -495,11 +531,14 @@ public class CMISResourceManager {
             return null;
     }
     
-    public boolean setInputStream(XInputStream xInputStream) throws IOException
+    public boolean setInputStream(XInputStream xInputStream) throws IOException, NotConnectedException, BufferSizeExceededException, com.sun.star.io.IOException
     {
-        if(isDocument)
+        if(isDocument && canSetContentStream())
         {
-            XInputStreamToInputStreamAdapter inputStream = new XInputStreamToInputStreamAdapter(xInputStream);
+            XInputStreamToInputStreamAdapter inputStream = new XInputStreamToInputStreamAdapter(xInputStream);            
+            //byte arr[][] = new byte[1][];  
+            //xInputStream.readBytes(arr, xInputStream.available());
+            //InputStream inputStream = new ByteArrayInputStream(arr[0]);
             try
             {
                 ContentStream stream = connected.getObjectFactory().createContentStream(getName(), inputStream.available(),getMimeType(), inputStream);
@@ -518,8 +557,10 @@ public class CMISResourceManager {
     
     public boolean isCheckedOut()
     {
+        if(pwc!=null)
+            return true;
         if(isDocument)
-            return documentObject.isVersionSeriesCheckedOut();
+            return documentObject.isVersionSeriesCheckedOut().booleanValue();
         
         return false;
     }
