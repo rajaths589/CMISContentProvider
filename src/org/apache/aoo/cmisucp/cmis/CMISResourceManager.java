@@ -542,7 +542,9 @@ public class CMISResourceManager {
             try
             {
                 ContentStream stream = connected.getObjectFactory().createContentStream(getName(), inputStream.available(),getMimeType(), inputStream);
-                getDocument().setContentStream(stream, true);
+                Document d = getDocument().setContentStream(stream, true);
+                if(d!=null)
+                    documentObject = d;
                 return true;
             }
             catch(Exception ex)

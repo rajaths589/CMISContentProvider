@@ -219,6 +219,7 @@ public final class CMISContent extends ComponentBase
             {
                 // throw some expception
             }
+        
             throw new ContentCreationException();  
         }
         exists = true;

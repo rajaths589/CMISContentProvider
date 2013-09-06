@@ -4,4 +4,6 @@
                        manifest:full-path="CMISContentProvider.jar"/>
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
                        manifest:full-path="registry/data/org/openoffice/ucb/ContentProvider.xcu"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
+                       manifest:full-path="registry/data/org/openoffice/Office/OptionsDialog.xcu"/>
 </manifest:manifest>
