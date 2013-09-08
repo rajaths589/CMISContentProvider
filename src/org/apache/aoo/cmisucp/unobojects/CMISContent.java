@@ -59,7 +59,9 @@ import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.ComponentBase;
 import com.sun.star.sdbc.XResultSet;
 import com.sun.star.sdbc.XRow;
+import com.sun.star.task.InteractionRequestStringResolver;
 import com.sun.star.task.XInteractionHandler;
+import com.sun.star.ucb.AuthenticationRequest;
 import com.sun.star.ucb.Command;
 import com.sun.star.ucb.CommandFailedException;
 import com.sun.star.ucb.ContentAction;
@@ -71,7 +73,9 @@ import com.sun.star.ucb.InsertCommandArgument;
 import com.sun.star.ucb.InteractiveBadTransferURLException;
 import com.sun.star.ucb.OpenCommandArgument2;
 import com.sun.star.ucb.OpenMode;
+import com.sun.star.ucb.RememberAuthentication;
 import com.sun.star.ucb.TransferInfo;
+import com.sun.star.ucb.URLAuthenticationRequest;
 import com.sun.star.ucb.UnsupportedCommandException;
 import com.sun.star.ucb.XCommandEnvironment;
 import com.sun.star.ucb.XCommandInfo;
@@ -141,6 +145,7 @@ public final class CMISContent extends ComponentBase
     private boolean is_folder;
     private String id;
 
+    private boolean processed = false;
     private boolean exists;     //Whether exists on CMIS repository
     private boolean created;    // whether created using createNewContent
     private boolean nameSet;    // whether name set
@@ -165,7 +170,7 @@ public final class CMISContent extends ComponentBase
         m_xContext = context;
         xContentid = xContentIdentifier;        
 
-        processIdentifier(xContentIdentifier.getContentIdentifier());
+        //processIdentifier(xContentIdentifier.getContentIdentifier());
         path = xContentIdentifier.getContentIdentifier();
     
         created = false;
@@ -173,7 +178,8 @@ public final class CMISContent extends ComponentBase
         inserted = false;
         
     }
-
+    
+    /*
     public CMISContent(XComponentContext context, String type, String uri) throws ContentCreationException, NotConnectedException, IOException
     {        
         m_xContext = context;
@@ -192,18 +198,18 @@ public final class CMISContent extends ComponentBase
         
         path = uri;
     }
+    */
     
     //My method
-    public void processIdentifier(String uri) throws ContentCreationException, NotConnectedException, IOException {                
+    public void processIdentifier(String uri,XInteractionHandler xIH) throws ContentCreationException, NotConnectedException, IOException {                        
         try
-        {     
-            CMISRepoCredentials cred = new CMISRepoCredentials(uri, "rajaths589", "******");            
-            //aConnect = new CMISConnect(m_xContext, uri, "rajaths589", "*****");
-            //connected_session = aConnect.getSession();
-            //cmisContent = aConnect.getObject();
+        {                 
+            CMISRepoCredentials cred = new CMISRepoCredentials(uri, xIH, m_xContext);
             CMISResourceCache resCache = CMISResourceCache.getObject(m_xContext);
-            resourceManager = resCache.getManager(cred);            
-        }
+            resourceManager = resCache.getManager(cred);             
+            //aConnect = new CMISConnect(m_xContext, uri, "rajaths589", "*****");            
+                       
+        }        
         catch(CmisBaseException e)
         {
             exists = false;            
@@ -224,6 +230,7 @@ public final class CMISContent extends ComponentBase
         }
         exists = true;
         setContentType();
+        processed = true;
         // cache properties
     }
 
@@ -320,9 +327,16 @@ public final class CMISContent extends ComponentBase
     }
     
     public Object execute(com.sun.star.ucb.Command aCommand, int CommandId, com.sun.star.ucb.XCommandEnvironment Environment) throws com.sun.star.uno.Exception, com.sun.star.ucb.CommandAbortedException, NotConnectedException, IOException, InteractiveBadTransferURLException {
-        XInteractionHandler xInteractionHandler;
+        XInteractionHandler xInteractionHandler = null;
         if(Environment!=null) 
-            xInteractionHandler = Environment.getInteractionHandler();
+            xInteractionHandler = Environment.getInteractionHandler();                        
+        if(xInteractionHandler==null)
+            throw new IllegalArgumentException("XInteractionHandler is null");
+        
+        if(!processed)
+        {
+            processIdentifier(path,xInteractionHandler);
+        }
         
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) 
         {
@@ -970,7 +984,7 @@ public final class CMISContent extends ComponentBase
                if(nameSet) 
                {
                    String parentUri = xContentid.getContentIdentifier().substring(0, xContentid.getContentIdentifier().lastIndexOf('/'));
-                   processIdentifier(parentUri);
+                   //processIdentifier(parentUri);
                    if(resourceManager.createFolder(xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1)))
                    {
                         ContentEvent arg = new ContentEvent();
@@ -978,7 +992,7 @@ public final class CMISContent extends ComponentBase
                         arg.Content = this;
                         arg.Id = xContentid;
                         exists = true;                        
-                        processIdentifier(xContentid.getContentIdentifier());
+//                        processIdentifier(xContentid.getContentIdentifier());
                         contentListenerNotifier(arg);
                         //ContentEvent to be created
                    }
@@ -993,7 +1007,7 @@ public final class CMISContent extends ComponentBase
                 if(nameSet)
                 {
                     String parentUri = xContentid.getContentIdentifier().substring(0, xContentid.getContentIdentifier().lastIndexOf('/'));
-                    processIdentifier(parentUri);
+                   // processIdentifier(parentUri);
                     if(resourceManager.createDocument(iArg.Data,xContentid.getContentIdentifier().substring(xContentid.getContentIdentifier().lastIndexOf("/")+1), "txt/plain"))
                     {
                         exists = true;
@@ -1001,7 +1015,7 @@ public final class CMISContent extends ComponentBase
                         arg.Action = ContentAction.INSERTED;
                         arg.Content = this;
                         arg.Id = xContentid;
-                        processIdentifier(xContentid.getContentIdentifier());
+                     //   processIdentifier(xContentid.getContentIdentifier());
                         contentListenerNotifier(arg);
                     }
                 }
@@ -1019,20 +1033,13 @@ public final class CMISContent extends ComponentBase
         List<PropertyAndValueSet> open_result = new ArrayList<PropertyAndValueSet>();       
         if(!exists)
             return null;
-        
-        Folder f = resourceManager.getFolder();
-        OperationContext opCon = connected_session.createOperationContext();
+                
+        OperationContext opCon = resourceManager.getOperationContext();
         
         if (oarg.Mode == OpenMode.ALL) 
         {
-            for (CmisObject o : f.getChildren()) 
-            {                           
-                CMISResourceManager tempChildResource;
-                if(xContentid.getContentIdentifier().endsWith("/"))
-                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+o.getName());
-                else
-                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+"/"+o.getName());
-                
+            for (CMISResourceManager tempChildResource : resourceManager.getChildrenAsManager()) 
+            {                                                           
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
                 PropertyAndValueSet childValue;
                 if(xContentid.getContentIdentifier().endsWith("/"))                    
@@ -1046,15 +1053,8 @@ public final class CMISContent extends ComponentBase
         else if (oarg.Mode == OpenMode.DOCUMENTS) 
         {
             opCon.setFilterString("cmis:document");
-            for (CmisObject o : f.getChildren(opCon)) 
-            {                
-                CMISResourceManager tempChildResource;
-                if(xContentid.getContentIdentifier().endsWith("/"))
-                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+o.getName());
-                else
-                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+"/"+o.getName());
-                
-                
+            for (CMISResourceManager tempChildResource : resourceManager.getChildrenAsManager()) 
+            {                                
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
                 PropertyAndValueSet childValue;
                 if(xContentid.getContentIdentifier().endsWith("/"))                    
@@ -1068,15 +1068,8 @@ public final class CMISContent extends ComponentBase
         else 
         {
             opCon.setFilterString("cmis:folder");
-            for (CmisObject o : f.getChildren(opCon)) 
+            for (CMISResourceManager tempChildResource : resourceManager.getChildrenAsManager()) 
             {
-                CMISResourceManager tempChildResource;
-                if(xContentid.getContentIdentifier().endsWith("/"))
-                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+o.getName());
-                else
-                    tempChildResource = new CMISResourceManager(m_xContext, o, connected_session, xContentid.getContentIdentifier()+"/"+o.getName());
-                
-                
                 Any values[] = tempChildResource.getPropertiesAsAny(oarg.Properties);
                 PropertyAndValueSet childValue;
                 if(xContentid.getContentIdentifier().endsWith("/"))                    
@@ -1299,7 +1292,9 @@ private Any getPropertyValues(Property[] request)
 
     public com.sun.star.ucb.XContent createNewContent(com.sun.star.ucb.ContentInfo Info)
     {        
+        
         XContent xContent = null;
+        /*
         try {
             xContent = new CMISContent(m_xContext, Info.Type, path);
         } catch (ContentCreationException ex) {
@@ -1309,6 +1304,7 @@ private Any getPropertyValues(Property[] request)
         } catch (IOException ex) {
             Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
         }
+        */
         return xContent;
     }
 

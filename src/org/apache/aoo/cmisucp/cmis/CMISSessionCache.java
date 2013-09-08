@@ -71,7 +71,8 @@ public class CMISSessionCache {
                 }
                 
                 CmisObject obj1 = sameSession.getObjectByPath(relative_path);
-                CMISConnect connect = new CMISConnect(context, obj1 , sameSession);
+                CMISConnect connect = new CMISConnect(context, obj1 , sameSession,c.serverURL,credentials.URL);
+                credentials.serverURL = c.serverURL;
                 connectCache.put(credentials, connect);
                 return connect;
             }

@@ -49,6 +49,7 @@ import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.ItemIterable;
 import org.apache.chemistry.opencmis.client.api.ObjectId;
 import org.apache.chemistry.opencmis.client.api.ObjectType;
+import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.QueryResult;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
@@ -87,7 +88,7 @@ public class CMISResourceManager {
         connected = connect.getSession();        
         generateFolderorDocument();    
         m_Connect = connect;
-        url = connect.getURL();
+        url = connect.getURL();//not working
         initializePWC();
         
     }
@@ -135,6 +136,10 @@ public class CMISResourceManager {
         }
     }
     
+    public OperationContext getOperationContext()
+    {
+        return connected.createOperationContext();
+    }
     public boolean canSetContentStream()
     {
         if(isDocument)
@@ -680,7 +685,7 @@ public class CMISResourceManager {
     }
     
     public ItemIterable<CmisObject> getChildren()
-    {
+    {        
         if(isDocument)
             return null;
         else if(isFolder)
@@ -703,6 +708,16 @@ public class CMISResourceManager {
         return null;
     }
     
+    public List<CMISResourceManager> getChildrenAsManager()
+    {
+        List<CMISResourceManager> group = new ArrayList<CMISResourceManager>();
+        for(CmisObject obj:getChildren())
+        {            
+            CMISRepoCredentials childCred = creds.createChildCredentials(obj.getName());
+            group.add(CMISResourceCache.getObject(m_Context).getManager(childCred));            
+        }
+        return group;
+    }
     public void transfer(CMISConnect connect, String newName ) throws IOException, InteractiveBadTransferURLException
     {
         if(isDocument)
@@ -721,8 +736,8 @@ public class CMISResourceManager {
                 CMISResourceManager newTransferFolder = new CMISResourceManager(m_Context, connected.getObjectByPath(getPath()+"/"+newName), connected, url+"/"+newName);
                 for(CmisObject child:transferResource.getFolder().getChildren())
                 {                 
-                    CMISConnect childConnect = new CMISConnect(m_Context, child, connected);
-                    newTransferFolder.transfer(childConnect,child.getName());                                        
+                    //CMISConnect childConnect = new CMISConnect(m_Context, child, connected);
+                    //newTransferFolder.transfer(childConnect,child.getName());                                        
                 }            
             }
         }

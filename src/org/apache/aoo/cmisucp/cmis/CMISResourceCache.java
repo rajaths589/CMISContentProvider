@@ -20,6 +20,7 @@
  *************************************************************/
 package org.apache.aoo.cmisucp.cmis;
 
+import com.sun.star.task.XInteractionHandler;
 import com.sun.star.uno.XComponentContext;
 import java.util.HashMap;
 import java.util.Map;

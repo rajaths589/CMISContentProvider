@@ -9,7 +9,6 @@ import com.sun.star.awt.XActionListener;
 import com.sun.star.awt.XButton;
 import com.sun.star.awt.XControl;
 import com.sun.star.awt.XControlContainer;
-import com.sun.star.awt.XControlModel;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XDialogProvider2;
 import com.sun.star.awt.XListBox;
@@ -19,7 +18,6 @@ import com.sun.star.awt.XTextComponent;
 import com.sun.star.awt.XWindow;
 import com.sun.star.beans.PropertyState;
 import com.sun.star.beans.PropertyValue;
-import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.XPropertySet;
 import com.sun.star.deployment.PackageInformationProvider;
 import com.sun.star.deployment.XPackageInformationProvider;
@@ -43,7 +41,6 @@ import com.sun.star.task.XMasterPasswordHandling;
 import com.sun.star.task.XPasswordContainer;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.UnoRuntime;
-import com.sun.star.util.XChangesBatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -97,10 +94,8 @@ public final class OptionsPageDialogHandler extends WeakBase
         } catch (Exception ex) {
             Logger.getLogger(OptionsPageDialogHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-
-    ;    
-    
+    }   
+       
     public static XSingleComponentFactory __getComponentFactory(String sImplementationName) {
         XSingleComponentFactory xFactory = null;
 
@@ -432,6 +427,7 @@ public final class OptionsPageDialogHandler extends WeakBase
         }
 
         public void disposing(EventObject arg0) {
+            xD = null;
         }
     }
 }

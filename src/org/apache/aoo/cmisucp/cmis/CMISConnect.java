@@ -49,6 +49,8 @@ public class CMISConnect {
     private String url;
     private String parent_localpath;
     
+    private boolean authStatus = true;
+    
     private Session connected_session;
     private Folder root;
     private CmisObject content;
@@ -87,11 +89,13 @@ public class CMISConnect {
         
     }
     
-    public CMISConnect(XComponentContext xContext, CmisObject ob, Session s)
+    public CMISConnect(XComponentContext xContext, CmisObject ob, Session s, String serverURL,String uri)
     {
         m_Context = xContext;
         content = ob;
         connected_session = s;       
+        url = uri;
+        repositoryURL = serverURL;
     }
     
     public CMISConnect( XComponentContext xComponentContext, String uri, String user, String pwd )
@@ -125,15 +129,24 @@ public class CMISConnect {
           session = factory.createSession(sessionParameters);
           server_url = address;
           repositoryID = repoID;
-       }
+       }              
        catch(CmisBaseException ex)           
        {
+           if(ex.getClass().getName().equalsIgnoreCase("org.apache.chemistry.opencmis.commons.exceptions.CmisUnauthorizedException"))               
+           {
+               authStatus = false;
+           }
           return false;
        }
        
        connected_session = session;
                      
        return true;
+    }
+    
+    public boolean getAuthStatus()
+    {
+        return authStatus;
     }
     
     public String getURL()
@@ -168,6 +181,10 @@ public class CMISConnect {
                 URI = URI+"/";
                 indexOfRepoID = URI.indexOf('/', indexOfServerPath+1);
             }
+            if(authStatus==false)
+            {                
+                break;
+            }
         }          
         String localpath = URI.substring(indexOfRepoID);
         repositoryURL = URI.substring(0,indexOfRepoID);
@@ -189,15 +206,18 @@ public class CMISConnect {
     }    
     private void connectToObject(String path)
     {        
-        try
+        if(authStatus==true)
         {
-            content = connected_session.getObjectByPath(path);            
-            contentType = content.getBaseTypeId().value();
-        }
-        catch(CmisBaseException ex)
-        {
-            content = null;
-            contentType = null;
+            try
+            {
+                content = connected_session.getObjectByPath(path);            
+                contentType = content.getBaseTypeId().value();
+            }
+            catch(CmisBaseException ex)
+            {
+                content = null;
+                contentType = null;
+            }
         }
     }
     private void connectToID(String id)
