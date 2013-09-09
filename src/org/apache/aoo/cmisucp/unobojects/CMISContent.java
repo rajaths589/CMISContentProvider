@@ -202,7 +202,8 @@ public final class CMISContent extends ComponentBase
     
     //My method
     public void processIdentifier(String uri,XInteractionHandler xIH) throws ContentCreationException, NotConnectedException, IOException {                        
-        try
+	uri = uri.replace("%20", " ");        
+	try
         {                 
             CMISRepoCredentials cred = new CMISRepoCredentials(uri, xIH, m_xContext);
             CMISResourceCache resCache = CMISResourceCache.getObject(m_xContext);

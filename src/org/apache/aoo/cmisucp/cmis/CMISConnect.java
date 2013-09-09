@@ -153,6 +153,8 @@ public class CMISConnect {
     {
         return url;
     }
+    
+    /*
     private void decodeURI(String URI)        
     {        
         if(URI.startsWith(cmisHTTP))
@@ -201,9 +203,47 @@ public class CMISConnect {
         {
             parentURL = parentURL+"/";
         }*/
+	/*
         connectToObject(localpath);
         
-    }    
+    }*/
+
+    private void decodeURI(String URI)
+    {        
+        if(URI.startsWith(cmisHTTP))
+        {            
+            URI = URI.replaceFirst(cmisHTTP, "http");             
+        }
+        else if(URI.startsWith(cmisHTTPS))
+        {            
+            URI = URI.replaceFirst(cmisHTTPS, "https");                
+        }               
+                
+        if(URI.endsWith("."))
+            URI = URI.substring(0,URI.length()-1);
+        
+        if(URI.endsWith("/"))
+            URI = URI.substring(0,URI.length()-1);
+        
+        int prompt = URI.indexOf("://")+3;  
+        int repositorySlash = URI.lastIndexOf("/");
+        if(connectToRepository(URI.substring(0, repositorySlash), URI.substring(repositorySlash+1)))
+        {
+            repositoryURL = URI.replaceFirst("http://", "cmis://");            
+            //repositoryURL = URI;          
+            try
+            {
+                content = connected_session.getObjectByPath("/");            
+                contentType = content.getBaseTypeId().value();
+            }
+            catch(CmisBaseException ex)
+            {
+                content = null;
+                contentType = null;
+            }
+        }        
+    }
+        
     private void connectToObject(String path)
     {        
         if(authStatus==true)

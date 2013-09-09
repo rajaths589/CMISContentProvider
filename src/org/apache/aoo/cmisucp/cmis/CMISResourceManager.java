@@ -32,6 +32,7 @@ import com.sun.star.uno.Type;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.util.DateTime;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -513,7 +514,7 @@ public class CMISResourceManager {
     
     public XInputStream getInputStream() throws IOException, NotConnectedException, com.sun.star.io.IOException
     {
-        if(isDocument)
+       if(isDocument)
         {    
             InputStream inp = null;
             try
@@ -524,13 +525,16 @@ public class CMISResourceManager {
             {
                 log.info("error");
             }
-            int length = inp.available();
-            byte arr[][] = new byte[1][];
-            byte bytes[] = new byte[length];
-            arr[0] = bytes;           
-            int nr = inp.read(bytes);
-            ByteArrayToXInputStreamAdapter byteAdapter = new ByteArrayToXInputStreamAdapter(arr[0]);
-            return byteAdapter;            
+            
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            int nRead;
+            byte[] data = new byte[16384];
+            while ((nRead = inp.read(data, 0, data.length)) != -1) 
+            {
+                buffer.write(data, 0, nRead);
+            }
+            buffer.flush();
+            return new ByteArrayToXInputStreamAdapter(buffer.toByteArray());
         }
         else
             return null;

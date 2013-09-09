@@ -213,18 +213,12 @@ public class CMISRepoCredentials
     
     public boolean startsWithServer(CMISRepoCredentials compare)
     {            
-        if(username.equalsIgnoreCase(compare.username))
-        {
-            if(password.equalsIgnoreCase(compare.password))
-            {
                 if(compare.serverURL!=null)
                 {
                     if((URL.startsWith(compare.serverURL)))
                     {
                         return true;
                     }
-                }
-            }
         }
         return false;
     }
