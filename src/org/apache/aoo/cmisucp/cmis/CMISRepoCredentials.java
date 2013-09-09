@@ -46,8 +46,6 @@ import com.sun.star.task.UrlRecord;
 import com.sun.star.task.XInteractionHandler;
 import com.sun.star.task.XMasterPasswordHandling;
 import com.sun.star.task.XPasswordContainer;
-import com.sun.star.ucb.CommandAbortedException;
-import com.sun.star.ucb.CommandFailedException;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
@@ -58,7 +56,8 @@ public class CMISRepoCredentials
     private final String password;
     public String serverURL;
     private XPasswordContainer xPass;
-    private XInteractionHandler handler;
+    private XInteractionHandler handler;    
+    private String matchURL;
     
     public CMISRepoCredentials(String url, XInteractionHandler xIH, XComponentContext context)
     {
@@ -110,10 +109,16 @@ public class CMISRepoCredentials
                 UrlRecord urlMatch = xPass.find(url, xIH);
                 if(url.equals(urlMatch.Url))
                 {
+                    matchURL = urlMatch.Url;
                     return new String[]{urlMatch.UserList[0].UserName,urlMatch.UserList[0].Passwords[0]};
                 }   
                 else if(!urlMatch.Url.equals(""))
                 {
+                    if(url.startsWith(urlMatch.Url))
+                    {                        
+                        matchURL = urlMatch.Url;
+                        return new String[]{urlMatch.UserList[0].UserName,urlMatch.UserList[0].Passwords[0]};
+                    }
                     XComponent xMessageComp = null;
                     try
                     {
@@ -191,7 +196,13 @@ public class CMISRepoCredentials
     
     public CMISConnect getConnect(XComponentContext xContent)
     {
-        CMISConnect connect = new CMISConnect(xContent, URL, username, password);
+        CMISConnect connect;
+        
+        if(matchURL==null)
+            connect = new CMISConnect(xContent, URL, username, password);
+        else
+            connect = new CMISConnect(xContent, URL, username, password,matchURL);
+        
         boolean authStatus = connect.getAuthStatus();
         if(authStatus==true)
         {

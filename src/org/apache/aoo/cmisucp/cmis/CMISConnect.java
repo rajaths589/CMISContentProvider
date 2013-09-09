@@ -88,7 +88,15 @@ public class CMISConnect {
         contentType = content.getBaseTypeId().value();
         
     }
-    
+    public CMISConnect(XComponentContext xContext, String uri,String user, String pwd, String serverURL )
+    {
+        m_Context = xContext;
+        username = user;
+        password = pwd;
+        url = uri;
+        decodeURI(uri,serverURL);
+        contentType = content.getBaseTypeId().value();
+    }
     public CMISConnect(XComponentContext xContext, CmisObject ob, Session s, String serverURL,String uri)
     {
         m_Context = xContext;
@@ -208,6 +216,56 @@ public class CMISConnect {
         
     }*/
 
+    private void decodeURI(String URI, String server)
+    {
+        if(server.startsWith(cmisHTTP))
+        {            
+            server = server.replaceFirst(cmisHTTP, "http");             
+        }
+        else if(server.startsWith(cmisHTTPS))
+        {            
+            server = server.replaceFirst(cmisHTTPS, "https");                
+        }               
+        if(URI.startsWith(cmisHTTP))
+        {            
+            URI = URI.replaceFirst(cmisHTTP, "http");             
+        }
+        else if(URI.startsWith(cmisHTTPS))
+        {            
+            URI = URI.replaceFirst(cmisHTTPS, "https");                
+        }               
+        if(server.endsWith("."))
+            server = server.substring(0,server.length()-1);
+        
+        if(server.endsWith("/"))
+            server = server.substring(0,server.length()-1);
+        
+        if(URI.endsWith("."))
+            URI = URI.substring(0,URI.length()-1);
+        
+        if(URI.endsWith("/"))
+            URI = URI.substring(0,URI.length()-1);
+        int repositorySlash = server.lastIndexOf("/");        
+        if(connectToRepository(server.substring(0, repositorySlash), server.substring(repositorySlash+1)))
+        {
+            
+            repositoryURL = server;            
+            //repositoryURL = URI;          
+            try
+            {
+                String localpath;
+                localpath = URI.substring(server.length());
+                content = connected_session.getObjectByPath(localpath);            
+                contentType = content.getBaseTypeId().value();
+            }
+            catch(CmisBaseException ex)
+            {
+                content = null;
+                contentType = null;
+            }
+        }        
+        
+    }
     private void decodeURI(String URI)
     {        
         if(URI.startsWith(cmisHTTP))
@@ -225,8 +283,8 @@ public class CMISConnect {
         if(URI.endsWith("/"))
             URI = URI.substring(0,URI.length()-1);
         
-        int prompt = URI.indexOf("://")+3;  
-        int repositorySlash = URI.lastIndexOf("/");
+        //int prompt = URI.indexOf("://")+3;  
+        int repositorySlash = URI.lastIndexOf("/");        
         if(connectToRepository(URI.substring(0, repositorySlash), URI.substring(repositorySlash+1)))
         {
             repositoryURL = URI.replaceFirst("http://", "cmis://");            
@@ -244,6 +302,11 @@ public class CMISConnect {
         }        
     }
         
+    private void showMessageBox()
+    {
+        
+    }
+    
     private void connectToObject(String path)
     {        
         if(authStatus==true)
