@@ -49,217 +49,209 @@ import com.sun.star.task.XPasswordContainer;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
-public class CMISRepoCredentials 
-{
+/**
+ *
+ * @author rajath
+ */
+public class CMISRepoCredentials {
+
     public final String URL;
     private final String username;
     private final String password;
+    /**
+     *
+     */
     public String serverURL;
     private XPasswordContainer xPass;
-    private XInteractionHandler handler;    
+    private XInteractionHandler handler;
     private String matchURL;
-    
-    public CMISRepoCredentials(String url, XInteractionHandler xIH, XComponentContext context)
-    {
-        URL = url;        
+
+    public CMISRepoCredentials(String url, XInteractionHandler xIH, XComponentContext context) {
+        URL = url;
         String arr[] = obtainUserFromPasswordContainer(xIH, context, url);
         username = arr[0];
         password = arr[1];
     }
-    
-    public CMISRepoCredentials(String url, String user, String pwd)
-    {
+
+    /**
+     *
+     * @param url
+     * @param user
+     * @param pwd
+     */
+    public CMISRepoCredentials(String url, String user, String pwd) {
         URL = url;
         password = pwd;
         username = user;
     }
-    
-    private String[] obtainUserFromPasswordContainer(XInteractionHandler xIH, XComponentContext context, String url)
-    {
+
+    private String[] obtainUserFromPasswordContainer(XInteractionHandler xIH, XComponentContext context, String url) {
         xPass = null;
         handler = xIH;
         XMasterPasswordHandling xMaster = null;
-        
-        if(xIH==null || context==null)
-        {
-            throw new IllegalArgumentException("InteractionHandler or Component Context is Null");                    
+
+        if (xIH == null || context == null) {
+            throw new IllegalArgumentException("InteractionHandler or Component Context is Null");
         }
-        
+
         XMultiComponentFactory factory = context.getServiceManager();
-        if(factory!=null)
-        {            
+        if (factory != null) {
             XFrame current_frame = null;
-            try
-            {
+            try {
                 Object passObj = factory.createInstanceWithContext("com.sun.star.task.PasswordContainer", context);
                 xPass = UnoRuntime.queryInterface(XPasswordContainer.class, passObj);
                 xMaster = UnoRuntime.queryInterface(XMasterPasswordHandling.class, passObj);
                 Object desktop = factory.createInstanceWithContext("com.sun.star.frame.Desktop", context);
                 XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
                 current_frame = xDesktop.getCurrentFrame();
-            }
-            catch(Exception ex)
-            {
+            } catch (Exception ex) {
                 // log the exception
             }
-            
-            if(xPass!=null && xMaster!=null)
-            {
+
+            if (xPass != null && xMaster != null) {
                 xMaster.allowPersistentStoring(true);
                 UrlRecord urlMatch = xPass.find(url, xIH);
-                if(url.equals(urlMatch.Url))
-                {
+                if (url.equals(urlMatch.Url)) {
                     matchURL = urlMatch.Url;
-                    return new String[]{urlMatch.UserList[0].UserName,urlMatch.UserList[0].Passwords[0]};
-                }   
-                else if(!urlMatch.Url.equals(""))
-                {
-                    if(url.startsWith(urlMatch.Url))
-                    {                        
+                    return new String[]{urlMatch.UserList[0].UserName, urlMatch.UserList[0].Passwords[0]};
+                } else if (!urlMatch.Url.equals("")) {
+                    String possibleMatch = urlMatch.Url;
+                    if (urlMatch.Url.endsWith("/")) {
+                        possibleMatch = urlMatch.Url.substring(0, urlMatch.Url.length() - 1);
+                    }
+                    if (urlMatch.Url.endsWith("/.")) {
+                        possibleMatch = urlMatch.Url.substring(0, urlMatch.Url.length() - 2);
+                    }
+
+                    if (url.startsWith(possibleMatch)) {
                         matchURL = urlMatch.Url;
-                        return new String[]{urlMatch.UserList[0].UserName,urlMatch.UserList[0].Passwords[0]};
+                        return new String[]{urlMatch.UserList[0].UserName, urlMatch.UserList[0].Passwords[0]};
                     }
                     XComponent xMessageComp = null;
-                    try
-                    {
+                    try {
                         Object toolkit = factory.createInstanceWithContext("com.sun.star.awt.Toolkit", context);
                         XMessageBoxFactory xMessageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, toolkit);
-                        Rectangle aRectangle = new Rectangle();                        
+                        Rectangle aRectangle = new Rectangle();
                         XControl windowControl = UnoRuntime.queryInterface(XControl.class, current_frame.getContainerWindow());
                         XMessageBox xMessage;
-                        if(windowControl!=null)
-                            xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: "+urlMatch.Url+" is similar to the entered url. Use same user data?");
-                        else
-                            xMessage = xMessageBoxFactory.createMessageBox(null, MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: "+urlMatch.Url+" is similar to the entered url. Use same user data?");
-                        
-                        if(xMessage!=null)
-                        {
+                        if (windowControl != null) {
+                            xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: " + urlMatch.Url + " is similar to the entered url. Use same user data?");
+                        } else {
+                            xMessage = xMessageBoxFactory.createMessageBox(null, MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: " + urlMatch.Url + " is similar to the entered url. Use same user data?");
+                        }
+
+                        if (xMessage != null) {
                             short result = xMessage.execute();
-                            if(result == MessageBoxResults.YES)
-                            {                                                                
-                                return new String[]{urlMatch.UserList[0].UserName,urlMatch.UserList[0].Passwords[0]};
-                            }
-                            else
-                            {
+                            if (result == MessageBoxResults.YES) {
+                                return new String[]{urlMatch.UserList[0].UserName, urlMatch.UserList[0].Passwords[0]};
+                            } else {
                                 return getPassword(context, factory, current_frame);
                             }
                         }
-                    }
-                    catch(com.sun.star.uno.Exception ex)
-                    {
+                    } catch (com.sun.star.uno.Exception ex) {
                         // log the message
                     }
-                }
-                else
-                {
+                } else {
                     return getPassword(context, factory, current_frame);
                 }
             }
         }
-        
+
         return null;
     }
-    
-    private String[] getPassword(XComponentContext xContext, XMultiComponentFactory factory, XFrame frame)
-    {
-        try{
-        XPackageInformationProvider infoProvider = PackageInformationProvider.get(xContext);                             
-        String xdlLoc = infoProvider.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider")+"/dialogs/PasswordDialog.xdl";
-        Object dialogProvider = factory.createInstanceWithContext("com.sun.star.awt.DialogProvider2", xContext);
-        XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
-        XDialog passwordDialog = xDialogProvider2.createDialog(xdlLoc);
-        XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, passwordDialog);
-        XFixedText urlText = UnoRuntime.queryInterface(XFixedText.class, xControlContainer.getControl("Label1"));
-        XTextComponent usernameText = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField1"));
-        XTextComponent passwordText = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField2"));
-        XButton saveBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton1"));
-        XButton cancelBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton2"));
-        saveBtn.setActionCommand("save");
-        cancelBtn.setActionCommand("cancel");
-        PassDlgBtnListener passDlgBtnListener = new PassDlgBtnListener(passwordDialog);
-        saveBtn.addActionListener(passDlgBtnListener);
-        cancelBtn.addActionListener(passDlgBtnListener);
-        urlText.setText(URL);
-        passwordDialog.execute();
-        if(passDlgBtnListener.getValue())
-        {
-         //   username = usernameText.getText();            
-         //   password = passwordText.getText();
-            return new String[]{usernameText.getText(),passwordText.getText()};
-        }        
-        }catch(com.sun.star.uno.Exception e)
-        {
-            
+
+    private String[] getPassword(XComponentContext xContext, XMultiComponentFactory factory, XFrame frame) {
+        try {
+            XPackageInformationProvider infoProvider = PackageInformationProvider.get(xContext);
+            String xdlLoc = infoProvider.getPackageLocation("org.apache.aoo.cmisucp.CMISContentProvider") + "/dialogs/PasswordDialog.xdl";
+            Object dialogProvider = factory.createInstanceWithContext("com.sun.star.awt.DialogProvider2", xContext);
+            XDialogProvider2 xDialogProvider2 = UnoRuntime.queryInterface(XDialogProvider2.class, dialogProvider);
+            XDialog passwordDialog = xDialogProvider2.createDialog(xdlLoc);
+            XControlContainer xControlContainer = UnoRuntime.queryInterface(XControlContainer.class, passwordDialog);
+            XFixedText urlText = UnoRuntime.queryInterface(XFixedText.class, xControlContainer.getControl("Label1"));
+            XTextComponent usernameText = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField1"));
+            XTextComponent passwordText = UnoRuntime.queryInterface(XTextComponent.class, xControlContainer.getControl("TextField2"));
+            XButton saveBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton1"));
+            XButton cancelBtn = UnoRuntime.queryInterface(XButton.class, xControlContainer.getControl("CommandButton2"));
+            saveBtn.setActionCommand("save");
+            cancelBtn.setActionCommand("cancel");
+            PassDlgBtnListener passDlgBtnListener = new PassDlgBtnListener(passwordDialog);
+            saveBtn.addActionListener(passDlgBtnListener);
+            cancelBtn.addActionListener(passDlgBtnListener);
+            urlText.setText(URL);
+            passwordDialog.execute();
+            if (passDlgBtnListener.getValue()) {
+                //   username = usernameText.getText();            
+                //   password = passwordText.getText();
+                return new String[]{usernameText.getText(), passwordText.getText()};
+            }
+        } catch (com.sun.star.uno.Exception e) {
         }
         return new String[0];
     }
-    
-    public CMISConnect getConnect(XComponentContext xContent)
-    {
+
+    public CMISConnect getConnect(XComponentContext xContent) {
         CMISConnect connect;
-        
-        if(matchURL==null)
+
+        if (matchURL == null) {
             connect = new CMISConnect(xContent, URL, username, password);
-        else
-            connect = new CMISConnect(xContent, URL, username, password,matchURL);
-        
+        } else {
+            connect = new CMISConnect(xContent, URL, username, password, matchURL);
+        }
+
         boolean authStatus = connect.getAuthStatus();
-        if(authStatus==true)
-        {
+        if (authStatus == true && matchURL == null) {
             saveAsPersistent();
         }
         setServerURL(connect.getRepositoryURL());
         return connect;
     }
-    
-    private void saveAsPersistent()
-    {
+
+    private void saveAsPersistent() {
         xPass.addPersistent(URL, username, new String[]{password}, handler);
     }
-    
-    public void setServerURL(String url)
-    {
+
+    public void setServerURL(String url) {
         serverURL = url;
     }
-    
-    public boolean startsWithServer(CMISRepoCredentials compare)
-    {            
-                if(compare.serverURL!=null)
-                {
-                    if((URL.startsWith(compare.serverURL)))
-                    {
-                        return true;
-                    }
-        }
-        return false;
-    }
-    
-    public CMISRepoCredentials createChildCredentials(String childName)
-    {
-        if(URL.endsWith("/"))
-        {
-            return new CMISRepoCredentials(URL+childName, username, password);
-        }
-        else
-        {
-            return new CMISRepoCredentials(URL+"/"+childName, username, password);
-        }
-    }
-    
-    @Override
-    public boolean equals(Object o)
-    {
-        if(o instanceof CMISRepoCredentials)
-        {
-            CMISRepoCredentials cred = (CMISRepoCredentials)o;       
-            if(cred.URL.equals(URL)&&cred.username.equals(username)&&cred.password.equals(password))
-            {
-                return true;
-            }                   
-        }
-        return false;
-    }      
 
+    /**
+     *
+     * @param compare
+     * @return
+     */
+    public boolean startsWithServer(CMISRepoCredentials compare) {
+        if (compare.serverURL != null) {
+            if ((URL.startsWith(compare.serverURL))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public CMISRepoCredentials createChildCredentials(String childName) {
+        if (URL.endsWith("/")) {
+            return new CMISRepoCredentials(URL + childName, username, password);
+        } else {
+            return new CMISRepoCredentials(URL + "/" + childName, username, password);
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof CMISRepoCredentials) {
+            CMISRepoCredentials cred = (CMISRepoCredentials) o;
+            if (cred.URL.equals(URL) && cred.username.equals(username) && cred.password.equals(password)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     *
+     * @return
+     */
     @Override
     public int hashCode() {
         int hash = 5;
@@ -268,26 +260,33 @@ public class CMISRepoCredentials
         hash = 61 * hash + (this.password != null ? this.password.hashCode() : 0);
         return hash;
     }
-    
-    public class PassDlgBtnListener implements XActionListener
-    {
-            boolean value = false;
-            XDialog xD;
-            public PassDlgBtnListener(XDialog dia)
-            {
-                xD = dia;
+
+    public class PassDlgBtnListener implements XActionListener {
+
+        boolean value = false;
+        XDialog xD;
+
+        public PassDlgBtnListener(XDialog dia) {
+            xD = dia;
+        }
+
+        public void actionPerformed(ActionEvent arg0) {
+            if (arg0.ActionCommand.equalsIgnoreCase("save")) {
+                value = true;
             }
-            public void actionPerformed(ActionEvent arg0) {
-                if(arg0.ActionCommand.equalsIgnoreCase("save"))
-                    value = true;
-                xD.endExecute();
-            }
-            public boolean getValue()
-            {
-                return value;
-            }
-            public void disposing(EventObject arg0) {
-                xD = null;
-            }
+            xD.endExecute();
+        }
+
+        public boolean getValue() {
+            return value;
+        }
+
+        /**
+         *
+         * @param arg0
+         */
+        public void disposing(EventObject arg0) {
+            xD = null;
+        }
     }
 }

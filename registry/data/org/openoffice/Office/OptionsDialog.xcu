@@ -13,10 +13,18 @@
             </prop>  
             <node oor:name="Leaves">
                 <node oor:name="org.apache.aoo.cmisucp.CMISContentProviderOptions" oor:op="fuse">
-                    <prop oor:name="Id"><value>org.apache.aoo.cmisucp.CMISContentProvider</value></prop>
-                    <prop oor:name="Label"><value xml:lang="en-US">CMIS UCP Options</value></prop>
-                    <prop oor:name="OptionsPage"><value>%origin%/../../../../../dialogs/CMISUCPOptionsPage.xdl</value></prop>
-                    <prop oor:name="EventHandlerService"><value>org.apache.aoo.cmisucp.dialog.OptionsPageDialogHandler</value></prop>
+                    <prop oor:name="Id">
+                        <value>org.apache.aoo.cmisucp.CMISContentProvider</value>
+                    </prop>
+                    <prop oor:name="Label">
+                        <value xml:lang="en-US">CMIS UCP Options</value>
+                    </prop>
+                    <prop oor:name="OptionsPage">
+                        <value>%origin%/../../../../../dialogs/CMISUCPOptionsPage.xdl</value>
+                    </prop>
+                    <prop oor:name="EventHandlerService">
+                        <value>org.apache.aoo.cmisucp.dialog.OptionsPageDialogHandler</value>
+                    </prop>
                 </node>
             </node>
         </node>

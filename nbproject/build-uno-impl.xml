@@ -80,7 +80,7 @@
     
     <target name="-uno-idl-idlc-condition" description="check idlc dependencies" depends="-uno-project-init">
         <uptodate property="idlc.notRequired" targetfile ="${build.dir}/idlc.compile">
-           <srcfiles dir= "${src.dir}" includes="**/*.idl"/>
+            <srcfiles dir= "${src.dir}" includes="**/*.idl"/>
         </uptodate>
     </target>    
    
@@ -183,7 +183,7 @@
                 <and>
                     <!-- if file does not exist, "isfileselected" is not executed -->
                     <!-- necessary construct because available is not allowed here 
-                        but should be according to documentation -->
+                    but should be according to documentation -->
                     <istrue value="${build.manifest.exists}"/>
                     <!-- produces an error if file is not there -->
                     <isfileselected file="${build.dir}/MANIFEST.MF">
@@ -231,7 +231,7 @@
     
     <!-- enter the registration classes unless the user did not enter his own. Do nothing when the project is old -->
     <target name="-do-registration" depends="-do-central-registration,-check-registration-classes-name" 
-                if="new.project.registration" unless="do.no.registration">
+            if="new.project.registration" unless="do.no.registration">
         <manifest file="${build.dir}/MANIFEST.MF" mode="update">
             <section name="${slash.registration.class}"> 
                 <attribute name="RegistrationClasses" value="${registration.classname}"/>
@@ -398,7 +398,7 @@
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->    
     
-<!--    <target name="uno-deploy" description="Deploys UNO extension package" depends="uno-package">
+    <!--    <target name="uno-deploy" description="Deploys UNO extension package" depends="uno-package">
         <echo message="deploying UNO extension package ..."/>
         <echo message="${office.unopkg} gui -f ${uno.package.name}"/>
         <echo message="${office.soffice} ${uno.package.name}"/>

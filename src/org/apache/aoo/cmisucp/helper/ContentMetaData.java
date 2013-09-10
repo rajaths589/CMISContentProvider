@@ -13,55 +13,98 @@ public class ContentMetaData implements XResultSetMetaData {
 
     private Property[] props;
 
+    /**
+     *
+     * @param props
+     */
     public ContentMetaData(Property[] props) {
         this.props = props;
     }
-    
+
     public int getColumnCount() throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return props.length;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public boolean isAutoIncrement(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return false;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public boolean isCaseSensitive(int arg0) throws SQLException {
 //        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
         Property prop = props[arg0 - 1];
-        if (prop.Name.equals("Title"))
+        if (prop.Name.equals("Title")) {
             return true;
+        }
         return false;  // cannot see why IsFolder should be case sensitive
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public boolean isSearchable(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return false;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public boolean isCurrency(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return false;
     }
 
     public int isNullable(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return 0;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public boolean isSigned(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return true;
     }
 
     public int getColumnDisplaySize(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return 2;
     }
 
     public String getColumnLabel(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return "Name";
     }
 
@@ -72,27 +115,44 @@ public class ContentMetaData implements XResultSetMetaData {
     }
 
     public String getSchemaName(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return "scheme";
     }
 
     public int getPrecision(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return 0;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public int getScale(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return 2;
     }
 
     public String getTableName(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return "table1";
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public String getCatalogName(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return "cat";
     }
 
@@ -101,36 +161,45 @@ public class ContentMetaData implements XResultSetMetaData {
         Property prop = props[arg0 - 1];
         if (prop.Name.equals("Title")) {
             retValue = DataType.VARCHAR;
-        }
-        else if (prop.Name.equals("IsFolder")) {
+        } else if (prop.Name.equals("IsFolder")) {
             retValue = DataType.BOOLEAN;
         }
         return retValue;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     * @throws SQLException
+     */
     public String getColumnTypeName(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return "col1";
     }
 
     public boolean isReadOnly(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return false;
     }
 
     public boolean isWritable(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return true;
     }
 
     public boolean isDefinitelyWritable(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return true;
     }
 
     public String getColumnServiceName(int arg0) throws SQLException {
-        System.out.println (new Throwable().fillInStackTrace().getStackTrace()[0]); System.out.flush();
+        System.out.println(new Throwable().fillInStackTrace().getStackTrace()[0]);
+        System.out.flush();
         return "col service";
     }
-    
 }

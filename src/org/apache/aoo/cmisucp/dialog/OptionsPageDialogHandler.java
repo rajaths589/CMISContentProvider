@@ -44,6 +44,10 @@ import com.sun.star.uno.UnoRuntime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ *
+ * @author rajath
+ */
 public final class OptionsPageDialogHandler extends WeakBase
         implements com.sun.star.awt.XContainerWindowEventHandler, XServiceInfo {
 
@@ -61,6 +65,10 @@ public final class OptionsPageDialogHandler extends WeakBase
     private XMultiComponentFactory xMCF;
     private XWindow m_xWindow;
 
+    /**
+     *
+     * @param context
+     */
     public OptionsPageDialogHandler(XComponentContext context) {
         m_xContext = context;
         xMCF = context.getServiceManager();
@@ -94,8 +102,8 @@ public final class OptionsPageDialogHandler extends WeakBase
         } catch (Exception ex) {
             Logger.getLogger(OptionsPageDialogHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }   
-       
+    }
+
     public static XSingleComponentFactory __getComponentFactory(String sImplementationName) {
         XSingleComponentFactory xFactory = null;
 
@@ -105,6 +113,11 @@ public final class OptionsPageDialogHandler extends WeakBase
         return xFactory;
     }
 
+    /**
+     *
+     * @param xRegistryKey
+     * @return
+     */
     public static boolean __writeRegistryServiceInfo(XRegistryKey xRegistryKey) {
         return Factory.writeRegistryServiceInfo(m_implementationName,
                 m_serviceNames,
@@ -178,6 +191,10 @@ public final class OptionsPageDialogHandler extends WeakBase
         }
     }
 
+    /**
+     *
+     * @return
+     */
     public String[] getSupportedMethodNames() {
         return new String[]{"external_event"};
     }
@@ -186,6 +203,11 @@ public final class OptionsPageDialogHandler extends WeakBase
         return m_implementationName;
     }
 
+    /**
+     *
+     * @param arg0
+     * @return
+     */
     public boolean supportsService(String arg0) {
         int len = m_serviceNames.length;
 
@@ -239,17 +261,14 @@ public final class OptionsPageDialogHandler extends WeakBase
                         XMessageBoxFactory xMessageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, oToolkit);
                         Rectangle aRectangle = new Rectangle();
                         XControl windowControl = UnoRuntime.queryInterface(XControl.class, m_xWindow);
-                        XMessageBox xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: "+urlRec.Url+" found. Still add?");
+                        XMessageBox xMessage = xMessageBoxFactory.createMessageBox(windowControl.getPeer(), MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO, "Similar URL Found", "URL: " + urlRec.Url + " found. Still add?");
                         xMessageComponent = UnoRuntime.queryInterface(XComponent.class, xMessage);
                         if (xMessage != null) {
                             short res = xMessage.execute();
-                            if(res == MessageBoxResults.YES)
-                            {
+                            if (res == MessageBoxResults.YES) {
                                 xPass.addPersistent(url, username, new String[]{password}, xHandler);
                                 refreshTable();
-                            }
-                            else
-                            {
+                            } else {
                                 addItem();
                             }
                         }
@@ -259,7 +278,7 @@ public final class OptionsPageDialogHandler extends WeakBase
                         if (xMessageComponent != null) {
                             xMessageComponent.dispose();
                         }
-                    }                    
+                    }
                 }
             } else {
                 showErrorMessage("Error", "Add only cmis url");
@@ -370,6 +389,9 @@ public final class OptionsPageDialogHandler extends WeakBase
         return m_serviceNames;
     }
 
+    /**
+     *
+     */
     public class BtnClassListener implements XActionListener {
 
         private boolean accepted;
@@ -379,6 +401,9 @@ public final class OptionsPageDialogHandler extends WeakBase
             xD = dialog;
         }
 
+        /**
+         *
+         */
         public BtnClassListener() {
         }
 
@@ -422,10 +447,18 @@ public final class OptionsPageDialogHandler extends WeakBase
             }
         }
 
+        /**
+         *
+         * @return
+         */
         public boolean getAccepted() {
             return accepted;
         }
 
+        /**
+         *
+         * @param arg0
+         */
         public void disposing(EventObject arg0) {
             xD = null;
         }

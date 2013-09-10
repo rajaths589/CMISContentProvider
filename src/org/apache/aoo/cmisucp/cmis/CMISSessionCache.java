@@ -26,69 +26,70 @@ import java.util.Map;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Session;
 
+/**
+ *
+ * @author rajath
+ */
 public class CMISSessionCache {
-    
-    private Map<CMISRepoCredentials,CMISConnect> connectCache;
+
+    private Map<CMISRepoCredentials, CMISConnect> connectCache;
     private static CMISSessionCache obj;
-    
-    private CMISSessionCache()
-    {
-        connectCache = new HashMap<CMISRepoCredentials,CMISConnect>();    
+
+    private CMISSessionCache() {
+        connectCache = new HashMap<CMISRepoCredentials, CMISConnect>();
     }
-    
-    private void addConnect(CMISConnect connect,CMISRepoCredentials credentials)
-    {
+
+    private void addConnect(CMISConnect connect, CMISRepoCredentials credentials) {
         connectCache.put(credentials, connect);
     }
-    
-    public CMISConnect getConnect(XComponentContext context, CMISRepoCredentials credentials)
-    {
-        for(CMISRepoCredentials c:connectCache.keySet())
-        {
-            if(credentials.equals(c))
-            {
+
+    /**
+     *
+     * @param context
+     * @param credentials
+     * @return
+     */
+    public CMISConnect getConnect(XComponentContext context, CMISRepoCredentials credentials) {
+        for (CMISRepoCredentials c : connectCache.keySet()) {
+            if (credentials.equals(c)) {
                 return connectCache.get(c);
             }
         }
-        for(CMISRepoCredentials c:connectCache.keySet())
-        {
-            if(credentials.startsWithServer(c))
-            {
+        for (CMISRepoCredentials c : connectCache.keySet()) {
+            if (credentials.startsWithServer(c)) {
                 CMISConnect similarConnect = connectCache.get(c);
                 Session sameSession = similarConnect.getSession();
                 String relative_path;
-                try
-                {
+                try {
                     relative_path = credentials.URL.substring(c.serverURL.length());
-                }
-                catch(StringIndexOutOfBoundsException ex)
-                {
+                } catch (StringIndexOutOfBoundsException ex) {
                     relative_path = "/";
                 }
-                if(relative_path.equals("/.")||relative_path.equals(".")||relative_path.equals(""))
-                {
+                if (relative_path.equals("/.") || relative_path.equals(".") || relative_path.equals("")) {
                     relative_path = "/";
                 }
-                
+
                 CmisObject obj1 = sameSession.getObjectByPath(relative_path);
-                CMISConnect connect = new CMISConnect(context, obj1 , sameSession,c.serverURL,credentials.URL);
+                CMISConnect connect = new CMISConnect(context, obj1, sameSession, c.serverURL, credentials.URL);
                 credentials.serverURL = c.serverURL;
                 connectCache.put(credentials, connect);
                 return connect;
             }
         }
-        
+
         CMISConnect connect = credentials.getConnect(context);
         connectCache.put(credentials, connect);
         return connect;
     }
-    
-    public static CMISSessionCache obtainSessionCache()
-    {
-        if(obj!=null)
+
+    /**
+     *
+     * @return
+     */
+    public static CMISSessionCache obtainSessionCache() {
+        if (obj != null) {
             return obj;
-        else
-        {
+        } else {
             obj = new CMISSessionCache();
             return obj;
         }

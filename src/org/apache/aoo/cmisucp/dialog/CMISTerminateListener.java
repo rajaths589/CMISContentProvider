@@ -25,21 +25,33 @@ import com.sun.star.frame.XTerminateListener;
 import com.sun.star.lang.EventObject;
 import org.apache.aoo.cmisucp.cmis.CMISResourceManager;
 
-public class CMISTerminateListener implements XTerminateListener{
+public class CMISTerminateListener implements XTerminateListener {
 
     private CMISResourceManager resourceManager;
-    public CMISTerminateListener(CMISResourceManager manager)
-    {
+
+    /**
+     *
+     * @param manager
+     */
+    public CMISTerminateListener(CMISResourceManager manager) {
         resourceManager = manager;
     }
-    
+
+    /**
+     *
+     * @param arg0
+     * @throws TerminationVetoException
+     */
     public void queryTermination(EventObject arg0) throws TerminationVetoException {
-        if(resourceManager.isCheckedOut())
-        {
-            throw new TerminationVetoException("CMIS Document Checkedout!!!", this);            
+        if (resourceManager.isCheckedOut()) {
+            throw new TerminationVetoException("CMIS Document Checkedout!!!", this);
         }
     }
 
+    /**
+     *
+     * @param arg0
+     */
     public void notifyTermination(EventObject arg0) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -47,5 +59,4 @@ public class CMISTerminateListener implements XTerminateListener{
     public void disposing(EventObject arg0) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-    
 }

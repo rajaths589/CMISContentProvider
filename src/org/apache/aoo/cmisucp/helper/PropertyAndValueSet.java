@@ -46,11 +46,10 @@ import java.util.logging.Logger;
 public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate {
 
     //private static HashMap<String, PropertyAndValueSet> thePropValueSet = new HashMap<String, PropertyAndValueSet>();
-    
     private ArrayList<PropertyAndValue> m_PropValues;
     private String m_URL;
     private static final Logger log = Logger.getLogger(PropertyAndValueSet.class.getName());
-    
+
     public PropertyAndValueSet(String url) {
         m_PropValues = new ArrayList<PropertyAndValue>();
         m_URL = url;
@@ -69,8 +68,12 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
             m_PropValues.add(pav);
         }
     }
-    
+
     // own methods
+    /**
+     *
+     * @return
+     */
     public Property[] getProperties() {
         // take any property and value array
         Property[] props = new Property[m_PropValues.size()];
@@ -80,11 +83,15 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
         }
         return props;
     }
-    
+
+    /**
+     *
+     * @return
+     */
     public String getUrl() {
         return m_URL;
     }
-    
+
     // Implement XRow
     public boolean wasNull() throws SQLException {
         log.info("PVS was null:");
@@ -98,18 +105,17 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
         }
         if (pav.value != null) {
             log.log(Level.INFO, "{0}Get Object {1} {2}", new Object[]{m_URL, pav.theProperty.Name, pav.value.toString()});
-        }
-        else {
+        } else {
             log.log(Level.INFO, "{0}#### Get Null Object {1}", new Object[]{m_URL, pav.theProperty.Name});
         }
         return pav.value;
     }
-    
-    private<T> T getValueAsType(int columnIndex, Class<T> type) throws SQLException {
+
+    private <T> T getValueAsType(int columnIndex, Class<T> type) throws SQLException {
         String errorMessage = null;
         try {
             Any any = getValueAsAny(columnIndex, null);
-            T result = (T)AnyConverter.toObject(type, any);
+            T result = (T) AnyConverter.toObject(type, any);
             return result;
         } catch (com.sun.star.lang.IllegalArgumentException ex) {
             errorMessage = ex.getMessage();
@@ -118,31 +124,73 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
         }
         throw new SQLException(errorMessage);
     }
-    
+
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public String getString(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, String.class);
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public boolean getBoolean(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, Boolean.class); // outboxing
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public byte getByte(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, Byte.class); // outboxing
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public short getShort(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, Short.class); // outboxing
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public int getInt(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, Integer.class); // outboxing
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public long getLong(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, Long.class); // outboxing
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public float getFloat(int columnIndex) throws SQLException {
         return getValueAsType(columnIndex, Float.class); // outboxing
     }
@@ -151,27 +199,51 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
         return getValueAsType(columnIndex, Double.class); // outboxing
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public byte[] getBytes(int columnIndex) throws SQLException {
         return getString(columnIndex).getBytes();
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public Date getDate(int columnIndex) throws SQLException {
         Any anyDate = getValueAsAny(columnIndex, null);
-        DateTime date = (DateTime)anyDate.getObject();
+        DateTime date = (DateTime) anyDate.getObject();
         return new Date(date.Day, date.Month, date.Year);
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public Time getTime(int columnIndex) throws SQLException {
         Any anyDate = getValueAsAny(columnIndex, null);
-        DateTime date = (DateTime)anyDate.getObject();
+        DateTime date = (DateTime) anyDate.getObject();
         return new Time(date.Hours, date.Minutes, date.Seconds, date.HundredthSeconds);
     }
 
     public DateTime getTimestamp(int columnIndex) throws SQLException {
         Any anyDate = getValueAsAny(columnIndex, null);
-        return (DateTime)anyDate.getObject();
+        return (DateTime) anyDate.getObject();
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public XInputStream getBinaryStream(int columnIndex) throws SQLException {
         InputStream inStream = new ByteArrayInputStream(getBytes(columnIndex));
         return new InputStreamToXInputStreamAdapter(inStream);
@@ -187,22 +259,32 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
             Any value = getValueAsAny(columnIndex, arg1);
             if (value != null) {
                 return value.getObject();
-            }
-            else {
+            } else {
                 errorMessage = "unknown property.";
             }
-        }
-        catch (IndexOutOfBoundsException ex) {
+        } catch (IndexOutOfBoundsException ex) {
             errorMessage = ex.getMessage();
         }
         throw new SQLException(errorMessage);
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public XRef getRef(int columnIndex) throws SQLException {
         log.info("Not supported yet.");
         return null;
     }
 
+    /**
+     *
+     * @param columnIndex
+     * @return
+     * @throws SQLException
+     */
     public XBlob getBlob(int columnIndex) throws SQLException {
         log.info("Not supported yet.");
         return null;
@@ -218,7 +300,7 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
         return null;
     }
     // finished XRow
-    
+
     // XColumnLocate 
     public int findColumn(String columnIndex) throws SQLException {
         log.log(Level.INFO, "#### Find Column: {0} ####", columnIndex);
@@ -231,9 +313,10 @@ public class PropertyAndValueSet extends WeakBase implements XRow, XColumnLocate
         }
         return index;
     }
-    
+
     // relation property - value
     private class PropertyAndValue {
+
         protected Property theProperty;
         protected Any value;
 
