@@ -218,6 +218,7 @@ public class CMISConnect {
 
     private void decodeURI(String URI, String server)
     {
+        URI = URI.replace("%20", " ");
         if(server.startsWith(cmisHTTP))
         {            
             server = server.replaceFirst(cmisHTTP, "http");             
@@ -255,6 +256,8 @@ public class CMISConnect {
             {
                 String localpath;
                 localpath = URI.substring(server.length());
+                if(localpath==null||localpath.equals("")||localpath.equals("."))
+                    localpath="/";
                 content = connected_session.getObjectByPath(localpath);            
                 contentType = content.getBaseTypeId().value();
             }
@@ -268,6 +271,7 @@ public class CMISConnect {
     }
     private void decodeURI(String URI)
     {        
+        URI = URI.replace("%20", " ");
         if(URI.startsWith(cmisHTTP))
         {            
             URI = URI.replaceFirst(cmisHTTP, "http");             
