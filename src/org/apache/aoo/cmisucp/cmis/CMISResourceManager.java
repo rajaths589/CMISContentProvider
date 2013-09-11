@@ -42,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.activation.MimetypesFileTypeMap;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.DocumentType;
@@ -135,11 +134,7 @@ public class CMISResourceManager {
     public OperationContext getOperationContext() {
         return connected.createOperationContext();
     }
-
-    /**
-     *
-     * @return
-     */
+   
     public boolean canSetContentStream() {
         if (isDocument) {
             if (connected.getRepositoryInfo().getCapabilities().getContentStreamUpdatesCapability() == CapabilityContentStreamUpdates.ANYTIME) {
@@ -261,11 +256,7 @@ public class CMISResourceManager {
         }
 
     }
-
-    /**
-     *
-     * @return
-     */
+   
     public boolean canCheckIn() {
         if (isDocument) {
             if (getDocument().getAllowableActions().getAllowableActions().contains(Action.CAN_CHECK_IN)) {
@@ -666,13 +657,13 @@ public class CMISResourceManager {
         } else if (isFolder) {
             Map<String, String> newDocProps = new HashMap<String, String>();
             newDocProps.put(PropertyIds.NAME, name);
-            newDocProps.put(PropertyIds.OBJECT_TYPE_ID, "VersionableType");
+            newDocProps.put(PropertyIds.OBJECT_TYPE_ID, ObjectType.DOCUMENT_BASETYPE_ID);
 
             XInputStreamToInputStreamAdapter inpStream = new XInputStreamToInputStreamAdapter(input);
             //String MIMETYPE = new MimetypesFileTypeMap().getContentType(inpStream);
             ContentStream stream = connected.getObjectFactory().createContentStream(name, inpStream.available(), MimeType, inpStream);
             try {
-                getFolder().createDocument(newDocProps, stream, VersioningState.MAJOR);
+                getFolder().createDocument(newDocProps, stream, VersioningState.NONE);
                 return true;
             } catch (CmisBaseException ex) {
                 return false;
@@ -714,17 +705,23 @@ public class CMISResourceManager {
      * @return
      */
     public String getParentPath() {
-        if (isFolder) {
-            return getFolder().getParents().get(0).getPath();
-        } else {
-            return getDocument().getParents().get(0).getPath();
+        if(creds.serverURL!=null)
+        {
+            String s = creds.serverURL;
+            if(s.endsWith("/"))
+                s = s.substring(0,s.length()-1);
+            if(isFolder) 
+            {
+                return s+getFolder().getParents().get(0).getPath();
+            }
+            else 
+            {
+                return s+getDocument().getParents().get(0).getPath();
+            }
         }
+        return null;
     }
-
-    /**
-     *
-     * @return
-     */
+    
     public ItemIterable<CmisObject> getChildren() {
         if (isDocument) {
             return null;

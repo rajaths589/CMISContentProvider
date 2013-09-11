@@ -24,7 +24,6 @@ import com.sun.star.uno.XComponentContext;
 import com.sun.star.lib.uno.helper.WeakBase;
 import com.sun.star.ucb.CommandInfo;
 import com.sun.star.ucb.GlobalTransferCommandArgument;
-import com.sun.star.ucb.TransferInfo;
 import com.sun.star.uno.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,12 +64,9 @@ public final class CMISCommandInfo extends WeakBase
         supported_commands.add(new CommandInfo("close", -1, Type.VOID));
         supported_commands.add(new CommandInfo("delete", -1, Type.BOOLEAN));
         supported_commands.add(new CommandInfo("insert", -1, Type.ANY));
-        supported_commands.add(new CommandInfo("transfer", -1, Type.ANY));
-        supported_commands.add(new CommandInfo("globalTransfer", -1, new Type(GlobalTransferCommandArgument.class)));
+        supported_commands.add(new CommandInfo("transfer", -1, Type.ANY));        
         supported_commands.add(new CommandInfo("createNewContent", -1, Type.ANY));
-        supported_commands.add(new CommandInfo("CreatableContentsInfo", -1, Type.ANY));
-        supported_commands.add(new CommandInfo("checkin", -1, Type.ANY));
-        supported_commands.add(new CommandInfo("checkout", -1, Type.VOID));
+        supported_commands.add(new CommandInfo("CreatableContentsInfo", -1, Type.ANY));       
     }
 
     // com.sun.star.ucb.XCommandInfo:

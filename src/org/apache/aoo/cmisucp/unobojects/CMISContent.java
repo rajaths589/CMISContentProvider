@@ -21,11 +21,17 @@
 package org.apache.aoo.cmisucp.unobojects;
 
 import com.sun.star.awt.ActionEvent;
+import com.sun.star.awt.MessageBoxButtons;
+import com.sun.star.awt.MessageBoxType;
+import com.sun.star.awt.Rectangle;
 import com.sun.star.awt.XActionListener;
 import com.sun.star.awt.XButton;
+import com.sun.star.awt.XControl;
 import com.sun.star.awt.XControlContainer;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XDialogProvider2;
+import com.sun.star.awt.XMessageBox;
+import com.sun.star.awt.XMessageBoxFactory;
 import com.sun.star.awt.XRadioButton;
 import com.sun.star.awt.XTextComponent;
 import com.sun.star.beans.Property;
@@ -368,16 +374,7 @@ public final class CMISContent extends ComponentBase
 
         if (aCommand.Name.equalsIgnoreCase("getCommandInfo")) {
             XCommandInfo xRet = new CMISCommandInfo(m_xContext);
-            return xRet;
-        } else if (aCommand.Name.equalsIgnoreCase("checkout")) {
-            return new Any(Type.BOOLEAN, resourceManager.getPrivateWorkingCopy());
-        } else if (aCommand.Name.equalsIgnoreCase("checkin")) {
-            CheckinCommandArgument checkinCommandArgument = (CheckinCommandArgument) AnyConverter.toObject(CheckinCommandArgument.class, aCommand.Argument);
-            try {
-                return new Any(Type.BOOLEAN, resourceManager.checkIn(checkinCommandArgument.major, checkinCommandArgument.xInp, checkinCommandArgument.comment));
-            } catch (java.io.IOException ex) {
-                Logger.getLogger(CMISContent.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            return xRet;     
         } else if (aCommand.Name.equalsIgnoreCase("getPropertySetInfo")) {
             XPropertySetInfo xRet = new CMISPropertySetInfo(m_xContext);
             return xRet;
@@ -416,6 +413,7 @@ public final class CMISContent extends ComponentBase
                     XInputStream testStream = null;
                     try {
                         if (pwc == false) {
+                            showMessage("Opening as ReadOnly as the document is not checkedout");
                             testStream = resourceManager.getInputStream();
                         } else {
                             if (resourceManager.getPrivateWorkingCopy()) {
@@ -493,7 +491,9 @@ public final class CMISContent extends ComponentBase
             }
             log.fine("just like that");
             try {
-                transferDocument(aTransInfo, Environment);
+                boolean b = transferDocument(aTransInfo, Environment);
+                if(b==false)
+                    throw new com.sun.star.uno.Exception("Document creation failed!");
                 /*
                  CMISConnect transferConnect;
                  try
@@ -661,7 +661,25 @@ public final class CMISContent extends ComponentBase
         }
         return com.sun.star.uno.Any.VOID;
     }
-
+    
+    private void showMessage(String message)
+    {
+        try{
+        XMultiComponentFactory factory = m_xContext.getServiceManager();
+        Object desktop = factory.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
+        XDesktop xDesktop = UnoRuntime.queryInterface(XDesktop.class, desktop);
+        XFrame current_frame = xDesktop.getCurrentFrame();
+        Object toolkit = factory.createInstanceWithContext("com.sun.star.awt.Toolkit", m_xContext);
+        XMessageBoxFactory xMessageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, toolkit);
+        Rectangle aRectangle = new Rectangle();
+        XControl windowControl = UnoRuntime.queryInterface(XControl.class, current_frame.getContainerWindow());
+        XMessageBox xMessage = xMessageBoxFactory.createMessageBox(null, MessageBoxType.INFOBOX, MessageBoxButtons.BUTTONS_OK, "Read-Only", "The document is not checkedOut. No edits can be saved.");
+        xMessage.execute();
+        }catch(com.sun.star.uno.Exception e)        
+        {
+            log.severe("Message not printed");
+        }
+    }
     private void loadDocumentReadOnly(CMISResourceManager manager) throws com.sun.star.uno.Exception {
         XMultiComponentFactory xMCF = m_xContext.getServiceManager();
         Object desktop = xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", m_xContext);
