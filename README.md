@@ -54,3 +54,6 @@ References:
 4. CMIS and Apache Chemistry in action - Book.
 
 5. http://en.wikipedia.org/wiki/Content_Management_Interoperability_Services
+
+for updates and latest source code check github repository:
+https://www.github.com/rajaths589/CMISContentProvider.git
